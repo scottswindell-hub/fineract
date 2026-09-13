@@ -416,10 +416,101 @@
     })();
   }
 
+  // Full ~60s scripted "dummy run": streams a lot of realistic server status,
+  // then lands a VIOLATION. Reuses the real render() so it looks identical to a
+  // live run. A subtle footer marker keeps it honest (simulated, not real data).
+  function runDemo() {
+    var repo = REPO || "scottswindell-hub/fineract", pr = PR || "8";
+    var sha = "d3m0" + "a1b2c3d4e5f6";
+    var files = [
+      "organisation/office/service/OfficeWritePlatformServiceJpaImpl.java",
+      "portfolio/loanaccount/service/LoanApplicationWritePlatformServiceJpaImpl.java",
+      "organisation/teller/service/TellerWritePlatformServiceJpaImpl.java", // the violation
+      "portfolio/savings/service/SavingsAccountWritePlatformServiceJpaImpl.java",
+      "organisation/staff/service/StaffWritePlatformServiceJpaImpl.java",
+      "portfolio/client/service/ClientWritePlatformServiceJpaImpl.java"
+    ];
+    var perFileBeh = [7, 11, 8, 9, 5, 8];
+    var cur = {
+      schema: "drift-gate-status-v1", sha: sha, pr: pr, repo: repo, state: "in_progress",
+      stages: [
+        { id: "assemble", label: "Assemble both revisions", state: "pending", detail: null },
+        { id: "analyze", label: "Analyze changed behaviors", state: "pending", detail: null },
+        { id: "evaluate", label: "Evaluate governance", state: "pending", detail: null }
+      ]
+    };
+    var stg = function (id) { return cur.stages.filter(function (s) { return s.id === id; })[0]; };
+    var steps = [];
+    var add = function (delay, fn) { steps.push({ delay: delay, fn: fn }); };
+
+    add(400, function () { stg("assemble").state = "active"; stg("assemble").detail = "resolving base & head refs…"; });
+    add(2200, function () { stg("assemble").detail = "fetching base snapshot from S3 bundle…"; });
+    add(2400, function () { stg("assemble").detail = "cloning PR branch (partial, blob:none)…"; });
+    add(1600, function () {
+      stg("assemble").state = "done"; stg("assemble").detail = "base 9f3a1b2, head " + sha.slice(0, 7);
+      stg("analyze").state = "active"; stg("analyze").detail = files.length + " changed production .java files";
+    });
+
+    var beh = 0;
+    files.forEach(function (f, i) {
+      var bn = f.split("/").pop();
+      var n = i + 1, tot = files.length;
+      add(1200, function () { stg("analyze").detail = "reading " + bn + " (" + n + "/" + tot + ")"; });
+      add(2600, function () { stg("analyze").detail = "javasrc2cpg → building CPG: " + bn; });
+      add(2100, function () { stg("analyze").detail = "matching idiom catalog in " + bn + " …"; });
+      add(1400, function () {
+        beh += perFileBeh[i] || 6;
+        var flag = (i === 2) ? "  ⚠ AUTHZ gate no longer present" : "";
+        stg("analyze").detail = beh + " behaviors recognized" + flag;
+      });
+    });
+
+    add(1200, function () {
+      stg("analyze").state = "done"; stg("analyze").detail = beh + " behaviors · 1 change(s)";
+      stg("evaluate").state = "active"; stg("evaluate").detail = "rolling up governed rules by (concept, scope)…";
+    });
+    add(2000, function () { stg("evaluate").detail = "22 governed · 21 preserved · 1 removed"; });
+    add(1800, function () { stg("evaluate").detail = "AUTHZ@createTeller — governed removal → resolving verdict…"; });
+    add(1400, function () {
+      stg("evaluate").state = "done"; stg("evaluate").detail = "1 governed rule violation";
+      cur.state = "completed"; cur.verdict = "VIOLATION"; cur.magnitude = "HIGH";
+      cur.reason = "governed AUTHZ removed in TellerWritePlatformServiceJpaImpl.createTeller";
+      cur.analysis = {
+        files_analyzed: files, n_behaviors: beh,
+        changes: [{
+          concept: "AUTHZ",
+          file: "fineract-provider/.../organisation/teller/service/TellerWritePlatformServiceJpaImpl.java",
+          line: 81, kind: "removed",
+          reason: "authenticatedUser() authorization gate removed from createTeller"
+        }]
+      };
+      cur.check_run_url = "#"; cur.cis = null;
+    });
+
+    var footer = el("foot-updated");
+    var t = 0;
+    steps.forEach(function (s) {
+      t += s.delay;
+      setTimeout(function () {
+        s.fn();
+        cur.updated_at = new Date().toISOString();
+        render({ // deep-ish copy so render sees fresh objects
+          schema: cur.schema, sha: cur.sha, pr: cur.pr, repo: cur.repo, state: cur.state,
+          verdict: cur.verdict, magnitude: cur.magnitude, reason: cur.reason,
+          analysis: cur.analysis, check_run_url: cur.check_run_url, cis: cur.cis,
+          updated_at: cur.updated_at,
+          stages: cur.stages.map(function (x) { return { id: x.id, label: x.label, state: x.state, detail: x.detail }; })
+        });
+        if (footer) footer.textContent = "simulated run · demo";
+      }, t);
+    });
+  }
+
   // ---- boot ----------------------------------------------------------------
+  var DEMO = qs.get("demo") === "1";
   render({ state: "absent", sha: SHA, pr: PR, repo: REPO });
-  if (MOCK || (!API && !SHA)) { setTimeout(runMock, 500); }
-  else if (API && SHA) { poll(); }
-  else { el("subline").textContent = "Add ?sha=<head sha>&api=<status endpoint> to follow a run — or ?mock=1 to preview."; }
+  if (API && SHA) { poll(); }                       // real run
+  else if (MOCK) { setTimeout(runMock, 500); }      // quick dev mock
+  else { setTimeout(runDemo, 600); }                // ?demo=1 or bare landing → full 60s dummy run
 })();
 </script>
