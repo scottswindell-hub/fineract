@@ -54,23 +54,32 @@ jobs:
           # the job green — they are surfaced amber/grey on the check run itself,
           # the authoritative signal.
           check="CodeIntent Drift Gate"
-          for i in $(seq 1 40); do   # ~40 * 6s = 240s ceiling
+          # Read one field of the CodeIntent check-run from the cached response.
+          # $1 is a python expression over `c` (the check-run dict, or {}).
+          py() { python3 -c "import json;d=json.load(open('/tmp/cr.json'));c=next((x for x in d.get('check_runs',[]) if x.get('name')=='$check'),{});print(($1) or '')"; }
+          for i in $(seq 1 60); do   # ~60 * 5s = 300s ceiling
             curl -sS -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
               "https://api.github.com/repos/$PR_OWNER/$PR_REPO/commits/$PR_SHA/check-runs?per_page=100" \
               -o /tmp/cr.json
-            status=$(python3 -c "import json;d=json.load(open('/tmp/cr.json'));c=next((x for x in d.get('check_runs',[]) if x.get('name')=='$check'),{});print(c.get('status') or '')")
-            concl=$(python3 -c "import json;d=json.load(open('/tmp/cr.json'));c=next((x for x in d.get('check_runs',[]) if x.get('name')=='$check'),{});print(c.get('conclusion') or '')")
-            echo "poll $i: status=${status:-none} conclusion=${concl:-none}"
-            if [ "$status" = "completed" ]; then
+            status=$(py "c.get('status')")
+            concl=$(py "c.get('conclusion')")
+            # output.title is what the Lambda updates live as each stage advances
+            # ("Analyze changed behaviors (1/3)"), so the log tracks real progress.
+            title=$(py "(c.get('output') or {}).get('title')")
+            if [ -z "$status" ]; then
+              echo "poll $i: waiting for the CodeIntent check to appear…"
+            elif [ "$status" = "completed" ]; then
+              echo "poll $i: completed — ${title:-verdict} → ${concl:-none}"
               if [ "$concl" = "failure" ]; then
                 echo "::error::CodeIntent governance VIOLATION — a governed behavior was removed. See the CodeIntent Drift Gate check."
                 exit 1
               fi
-              echo "CodeIntent verdict: ${concl:-none}"
               exit 0
+            else
+              echo "poll $i: $status — ${title:-in progress}"
             fi
-            sleep 6
+            sleep 5
           done
           echo "::warning::Timed out awaiting the CodeIntent verdict; see this PR's Checks card."
           exit 0
