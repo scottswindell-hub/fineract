@@ -12,11 +12,40 @@ on:
 permissions:
   checks: read
   contents: read
+  pull-requests: write
 
 jobs:
   drift-gate:
     runs-on: ubuntu-latest
     steps:
+      - name: Post live status page link
+        # Runs first, the instant the PR opens — independent of the (async,
+        # cold-startable) Lambda — so the live page URL is on the PR immediately.
+        # The page shows "waiting…" then animates as the gate writes status.
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_OWNER: ${{ github.repository_owner }}
+          PR_REPO: ${{ github.event.repository.name }}
+          PAGE_BASE: https://scottswindell-hub.github.io/fineract/
+          STATUS_API: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo
+        run: |
+          set -euo pipefail
+          URL="${PAGE_BASE}?sha=${PR_SHA}&api=${STATUS_API}&pr=${PR_NUMBER}&repo=${PR_OWNER}/${PR_REPO}"
+          BODY=$(printf '%s\n' \
+            "<!-- codeintent-live-status -->" \
+            "### 🛰️ CodeIntent — live governance view" \
+            "" \
+            "Watch this change go through the semantic-change gate in real time:" \
+            "" \
+            "**▶ [Open the live status page ↗](${URL})**" \
+            "" \
+            "_Fills in as the gate runs (assemble → analyze → evaluate). The verdict also posts to this PR's Checks card._")
+          gh pr comment "$PR_NUMBER" --body "$BODY" --edit-last 2>/dev/null \
+            || gh pr comment "$PR_NUMBER" --body "$BODY" \
+            || echo "::warning::could not post the live-status comment"
+
       - name: Call semantic drift gate
         env:
           API_URL: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/verify-semantic
