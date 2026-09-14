@@ -39,6 +39,16 @@ def badge(label: str, message: str, color: str) -> str:
     return f"![{label}](https://img.shields.io/badge/{enc(label)}-{enc(message)}-{color})"
 
 
+def link_button(text: str, url: str, color: str) -> str:
+    """A big, single-segment badge acting as a button -- plain markdown links
+    render as small, easy-to-miss text in a check run's sanitized output;
+    style=for-the-badge is the one thing that actually makes a link bigger
+    and more noticeable there."""
+    enc = lambda s: str(s).replace(" ", "%20").replace("-", "--")
+    img = f"https://img.shields.io/badge/{enc(text)}-{color}?style=for-the-badge"
+    return f"[![{text}]({img})]({url})"
+
+
 def blob_url(repo: str, sha: str, file: str, line) -> str:
     url = f"https://github.com/{repo}/blob/{sha}/{file}"
     return url + (f"#L{line}" if line is not None else "")
@@ -73,15 +83,16 @@ def build_summary(repo: str, sha: str, live_url: str, status: dict) -> str:
         lines.append("No governed behavior changes detected.")
 
     lines.append("")
-    links = [f"[🛰️ Live governance view]({live_url})"]
+    links = [link_button("🛰️ Live governance view", live_url, "0c94a6")]
     if status.get("repo"):
-        links.append(f"[📖 Rule Atlas](https://{status['repo'].split('/')[0]}.github.io/{status['repo'].split('/')[1]}/rules/)")
+        owner, name = status["repo"].split("/")
+        links.append(link_button("📖 Rule Atlas", f"https://{owner}.github.io/{name}/rules/", "6e5494"))
     if status.get("check_run_url"):
-        links.append(f"[View the PR check]({status['check_run_url']})")
+        links.append(link_button("✅ View the PR check", status["check_run_url"], "2ea44f"))
     cis = status.get("cis") or {}
     if cis.get("review_url"):
-        links.append(f"[Full semantic report]({cis['review_url']})")
-    lines.append(" · ".join(links))
+        links.append(link_button("📄 Full semantic report", cis["review_url"], "586069"))
+    lines.append(" ".join(links))
     return "\n".join(lines)
 
 
