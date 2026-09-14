@@ -10,7 +10,7 @@ on:
 # verdict — a second step polls this PR's Checks card and fails the job on
 # VIOLATION, so the job status agrees with the governance outcome.
 permissions:
-  checks: read
+  checks: write
   contents: read
   pull-requests: write
 
@@ -24,6 +24,7 @@ jobs:
       PR_SHA: ${{ github.event.pull_request.head.sha }}
       PR_OWNER: ${{ github.repository_owner }}
       PR_REPO: ${{ github.event.repository.name }}
+      STATUS_API: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo
       LIVE_URL: https://scottswindell-hub.github.io/fineract/?sha=${{ github.event.pull_request.head.sha }}&api=https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo&pr=${{ github.event.pull_request.number }}&repo=${{ github.repository }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
@@ -84,6 +85,11 @@ jobs:
               --live-url "$LIVE_URL" --run-url "$RUN_URL" --result "$1" \
               || echo "::warning::could not update the live-status PR description with the verdict"
           }
+          publish_report() {   # the Lambda's own check is one dense paragraph;
+            python3 .github/scripts/publish_semantic_report.py \
+              --repo "$GH_REPO" --sha "$PR_SHA" --status-api "$STATUS_API" --live-url "$LIVE_URL" \
+              || echo "::warning::could not publish the CodeIntent Semantic Report check"
+          }
           for i in $(seq 1 60); do   # ~60 * 5s = 300s ceiling
             curl -sS -H "Authorization: Bearer $GH_TOKEN" \
               -H "Accept: application/vnd.github+json" \
@@ -100,6 +106,7 @@ jobs:
               echo "poll $i: completed — ${title:-verdict} → ${concl:-none}"
               case "$concl" in success) icon="✅" ;; failure) icon="❌" ;; *) icon="⚠️" ;; esac
               finish "$icon ${title:-$concl}"
+              publish_report
               if [ "$concl" = "failure" ]; then
                 echo "::error::CodeIntent governance VIOLATION — a governed behavior was removed. See the CodeIntent Drift Gate check."
                 exit 1
