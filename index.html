@@ -220,6 +220,8 @@
   .kind.added { background: var(--warn); }
   .change-main { min-width: 0; }
   .change-concept { font-weight: 700; font-size: 14px; }
+  a.rule-link { color: var(--accent); text-decoration: none; border-bottom: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent); }
+  a.rule-link:hover { border-bottom-style: solid; }
   .change-loc { font-family: var(--mono); font-size: 12.5px; color: var(--accent); word-break: break-all; }
   .change-reason { color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
 
@@ -331,8 +333,13 @@
       cp.hidden = false;
       el("change-list").innerHTML = changes.map(function (c) {
         var loc = c.file ? baseName(c.file) + (c.line != null ? ":" + c.line : "") : "—";
+        // link the governed rule to its definition in the Rule Atlas (by idiom id)
+        var concept = c.idiom
+          ? '<a class="rule-link" href="rules/?rule=' + encodeURIComponent(c.idiom) +
+            '" title="View this rule in the Rule Atlas">' + esc(c.concept) + ' · ' + esc(c.idiom) + ' ↗</a>'
+          : esc(c.concept);
         return '<div class="change"><span class="kind ' + esc(c.kind) + '">' + esc(c.kind) + '</span>' +
-          '<div class="change-main"><div class="change-concept">' + esc(c.concept) + '</div>' +
+          '<div class="change-main"><div class="change-concept">' + concept + '</div>' +
           '<div class="change-loc">' + esc(loc) + '</div>' +
           (c.reason ? '<div class="change-reason">' + esc(c.reason) + '</div>' : '') +
           '</div></div>';
@@ -483,7 +490,7 @@
       cur.analysis = {
         files_analyzed: files, n_behaviors: beh,
         changes: [{
-          concept: "AUTHZ",
+          concept: "AUTHZ", idiom: "authz_gate",
           file: "fineract-provider/.../organisation/teller/service/TellerWritePlatformServiceJpaImpl.java",
           line: 81, kind: "removed",
           reason: "authenticatedUser() authorization gate removed from createTeller"

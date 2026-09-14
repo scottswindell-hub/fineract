@@ -91,6 +91,10 @@
   .list{display:grid;gap:11px;}
   details.rule{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);overflow:hidden;}
   details.rule[open]{box-shadow:var(--shadow);}
+  details.rule.target{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 30%,transparent);
+    animation:flash 2.6s ease-out;}
+  @keyframes flash{0%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 45%,transparent);}100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);}}
+  @media (prefers-reduced-motion:reduce){details.rule.target{animation:none;}}
   summary{list-style:none;cursor:pointer;padding:15px 17px;display:grid;
     grid-template-columns:auto 1fr auto;gap:12px;align-items:center;}
   summary::-webkit-details-marker{display:none;}
@@ -199,7 +203,7 @@
     var prov = 'recognition: '+esc(rec.backend||"—")+(rec.source_sha256?' · oracle '+esc(String(rec.source_sha256).slice(0,10)):'')+
       ' · def v'+esc(d.version||"?");
 
-    return '<details class="rule" data-hay="'+esc((d.id+" "+c+" "+line+" "+Object.keys(params).join(" ")).toLowerCase())+'">'+
+    return '<details class="rule" id="rule-'+esc(d.id||r.id)+'" data-rid="'+esc(d.id||r.id)+'" data-hay="'+esc((d.id+" "+c+" "+line+" "+Object.keys(params).join(" ")).toLowerCase())+'">'+
       '<summary>'+
         '<span class="cbadge '+cclass(c)+'">'+esc(c)+'</span>'+
         '<span class="r-main"><span class="r-id">'+esc(d.id||r.id)+'</span><div class="r-line">'+hi(line)+'</div></span>'+
@@ -230,7 +234,33 @@
     shown.sort(function(a,b){ var ca=concept(a),cb=concept(b); return ca<cb?-1:ca>cb?1:(a.definition.id<b.definition.id?-1:1); });
     el("list").innerHTML = shown.map(card).join("");
     el("empty").hidden = shown.length>0;
+    // keep the URL shareable: opening a rule stamps ?rule=<id>
+    [].forEach.call(el("list").querySelectorAll("details.rule"), function(d){
+      d.addEventListener("toggle", function(){
+        if(d.open){ try{ history.replaceState(null,"","?rule="+encodeURIComponent(d.getAttribute("data-rid"))); }catch(e){} }
+      });
+    });
   }
+
+  function focusRule(id){
+    if(!id) return;
+    // clear any filter/search so the target is always present, then open it
+    active=null; el("search").value="";
+    [].forEach.call(chips.children, function(ch){ ch.setAttribute("aria-pressed", ch.getAttribute("data-c")?"false":"true"); });
+    render();
+    var node=document.getElementById("rule-"+id);
+    if(node){ node.open=true; node.classList.add("target");
+      node.scrollIntoView({behavior:"smooth", block:"start"});
+      setTimeout(function(){ node.classList.remove("target"); }, 2600); }
+  }
+
   render();
+  // deep-link: ?rule=<id> or #rule-<id>
+  var want = new URLSearchParams(location.search).get("rule") ||
+             (location.hash.indexOf("rule-")===1 ? location.hash.slice(6) : "");
+  if(want) setTimeout(function(){ focusRule(want); }, 60);
+  window.addEventListener("hashchange", function(){
+    if(location.hash.indexOf("rule-")===1) focusRule(location.hash.slice(6));
+  });
 })();
 </script>
