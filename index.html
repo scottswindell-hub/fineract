@@ -68,6 +68,17 @@
     <div class="verdict-actions" id="verdict-actions"></div>
   </section>
 
+  <section class="cis" id="cis-pane" hidden>
+    <div class="cis-head">
+      <span class="cis-eyebrow">Governance record · CodeIntent Studio</span>
+      <span class="cis-badge" id="cis-badge">—</span>
+    </div>
+    <div class="cis-status mono" id="cis-status"></div>
+    <div class="cis-meta" id="cis-meta"></div>
+    <div class="cis-actions" id="cis-actions"></div>
+    <div class="cis-note" id="cis-note" hidden></div>
+  </section>
+
   <footer class="foot">
     <span id="foot-updated">—</span>
     <span class="foot-sep">·</span>
@@ -254,6 +265,23 @@
   .btn:active { transform: translateY(1px); }
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 
+  /* Governance (CIS) pane — the persisted source of truth */
+  .cis { margin-top: 16px; padding: 18px 20px; border-radius: var(--radius);
+    background: var(--panel); border: 1px solid var(--line);
+    border-top: 3px solid var(--info); box-shadow: var(--shadow); }
+  .cis-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .cis-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; font-weight: 700; color: var(--info); }
+  .cis-badge { font-family: var(--mono); font-size: 11.5px; font-weight: 800; letter-spacing: .6px; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 7px; color: #fff; background: var(--cisv, var(--unknown)); }
+  .cis-status { margin-top: 10px; color: var(--ink); font-size: 13.5px; }
+  .cis-meta { margin-top: 8px; color: var(--ink-2); font-size: 12.5px; font-family: var(--mono); }
+  .cis-actions { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .cis-note { margin-top: 10px; color: var(--ink-3); font-size: 12px; }
+  #app[data-cis="VIOLATION"] .cis-badge { --cisv: var(--bad); }
+  #app[data-cis="PASS"] .cis-badge { --cisv: var(--ok); }
+  #app[data-cis="REVIEW"] .cis-badge { --cisv: var(--warn); }
+  #app[data-cis="UNKNOWN"] .cis-badge { --cisv: var(--unknown); }
+
   .foot { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line-soft);
     color: var(--ink-3); font-size: 12.5px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .foot em { color: var(--ink-2); font-style: normal; font-weight: 600; }
@@ -288,6 +316,7 @@
   var PR = qs.get("pr") || "";
   var REPO = qs.get("repo") || "";
   var API = (qs.get("api") || "").replace(/\/$/, "");
+  var API_CIS = (qs.get("cis") || "").replace(/\/$/, "");  // override CIS read base
   var MOCK = qs.get("mock") === "1";
   var POLL_MS = 1500;
 
@@ -437,13 +466,59 @@
 
     var actions = [];
     if (s.check_run_url) actions.push('<a class="btn primary" target="_blank" rel="noopener" href="' + esc(s.check_run_url) + '">View the PR check ↗</a>');
-    if (s.cis && s.cis.review_url) actions.push('<a class="btn" target="_blank" rel="noopener" href="' + esc(s.cis.review_url) + '">Governance in CodeIntent ↗</a>');
+    // the CIS governance link is owned by the governance pane (needs the CIS base)
     el("verdict-actions").innerHTML = actions.join("");
 
     var box = el("verdict");
     box.hidden = false;
     // reflow then animate in
     void box.offsetWidth; box.classList.add("show");
+  }
+
+  // ---- CIS governance pane (the persisted source of truth) -----------------
+  function cisBase(s) { return API_CIS || ((s.cis && s.cis.base) || "").replace(/\/$/, ""); }
+
+  function renderCis(s) {
+    var pane = el("cis-pane");
+    if (!(s.cis && s.state === "completed")) { pane.hidden = true; return; }
+    var base = cisBase(s);
+    // demo / offline: render an inline record without a network call
+    if (s.cis.record) { paintCis(s.cis.record, base, s.cis); return; }
+    if (!base || !s.cis.change || !s.cis.review) { pane.hidden = true; return; }
+    var url = base + "/api/pipeline/review?" + new URLSearchParams({
+      project_key: s.cis.project || "", change_key: s.cis.change, review_key: s.cis.review });
+    fetch(url, { headers: { Accept: "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (d) { paintCis(d, base, s.cis); })
+      .catch(function () { paintCisPending(base, s.cis); });
+  }
+
+  function paintCis(d, base, ptr) {
+    var pane = el("cis-pane"); pane.hidden = false;
+    app.setAttribute("data-cis", d.outcome || "");
+    el("cis-badge").textContent = d.outcome || "—";
+    el("cis-status").textContent = d.status_line || "";
+    var meta = [];
+    if (d.policy_action) meta.push("Policy: " + (d.outcome || "") + " → " + d.policy_action);
+    if (d.baseline && d.baseline.version) meta.push("Baseline v" + d.baseline.version);
+    el("cis-meta").textContent = meta.join("  ·  ");
+    var reviewUrl = (ptr && ptr.review_url) || d.review_url || "";
+    el("cis-actions").innerHTML = reviewUrl
+      ? '<a class="btn primary" target="_blank" rel="noopener" href="' + esc(base + reviewUrl) + '">Open the governance record ↗</a>' : "";
+    el("cis-note").hidden = true;
+  }
+
+  function paintCisPending(base, ptr) {
+    var pane = el("cis-pane"); pane.hidden = false;
+    app.removeAttribute("data-cis");
+    el("cis-badge").textContent = "pending";
+    el("cis-status").textContent = "Awaiting the CodeIntent Studio governance record…";
+    el("cis-meta").textContent = "";
+    var reviewUrl = ptr && ptr.review_url;
+    el("cis-actions").innerHTML = reviewUrl
+      ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(base + reviewUrl) + '">Open in CodeIntent ↗</a>' : "";
+    var note = el("cis-note"); note.hidden = false;
+    note.textContent = "The governance record isn't readable yet (CIS not reachable from here).";
   }
 
   function render(s) {
@@ -460,6 +535,7 @@
       el("subline").textContent = s.reason || "";
     }
     renderVerdict(s);
+    renderCis(s);
     if (s.updated_at) el("foot-updated").textContent = "updated " + fmt(s.updated_at);
   }
   function fmt(iso) { try { return new Date(iso).toLocaleTimeString(); } catch (e) { return iso; } }
@@ -571,7 +647,14 @@
           reason: "authenticatedUser() authorization gate removed from createTeller"
         }]
       };
-      cur.check_run_url = "#"; cur.cis = null;
+      cur.check_run_url = "#";
+      cur.cis = {
+        base: "https://cis.example", project: "fineract-govern",
+        change: "2da59e0e-0bc1-46a7-9f06-5419f58449a1", review: "2dfdf120-cff2-4ce4-b319-2dbc518e191b",
+        review_url: "/projects/fineract-govern/changes/2da59e0e-0bc1-46a7-9f06-5419f58449a1/reviews/2dfdf120-cff2-4ce4-b319-2dbc518e191b",
+        record: { outcome: "VIOLATION", baseline: { version: 1 }, policy_action: "require_approval",
+          status_line: "CodeIntent: VIOLATION - deterministic conflict with governing authority (AUTHZ gate removed from createTeller)." }
+      };
     });
 
     var footer = el("foot-updated");
