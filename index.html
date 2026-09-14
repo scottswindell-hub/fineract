@@ -241,6 +241,8 @@
   .cl.hit { background: color-mix(in srgb, var(--bad) 14%, transparent); }
   .cl.hit .cln { color: var(--bad); font-weight: 700; }
   .cl.hit .clc { color: var(--ink); }
+  .cl.hit.hit-warn { background: color-mix(in srgb, var(--warn) 14%, transparent); }
+  .cl.hit.hit-warn .cln { color: var(--warn); }
   .snippet-loading, .snippet-error { padding: 8px 10px; font-size: 12.5px; color: var(--ink-3); font-family: var(--mono); }
 
   .checked-list { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 13.5px; display: grid; gap: 6px; }
@@ -324,7 +326,11 @@
       file.split("/").map(encodeURIComponent).join("/");
   }
 
-  function loadSnippet(containerId, repo, sha, file, line) {
+  // Same severity mapping as the .kind badge (removed/changed → bad, added → warn),
+  // so the highlighted line in the snippet doesn't overstate an "added" finding.
+  var SNIPPET_SEVERITY_BY_KIND = { added: "warn" };
+
+  function loadSnippet(containerId, repo, sha, file, line, kind) {
     var key = repo + "@" + sha + ":" + file;
     if (!snippetFileCache[key]) {
       snippetFileCache[key] = fetch(rawUrl(repo, sha, file)).then(function (r) {
@@ -332,6 +338,7 @@
         return r.text();
       });
     }
+    var hitClass = "cl hit hit-" + (SNIPPET_SEVERITY_BY_KIND[kind] || "bad");
     snippetFileCache[key].then(function (text) {
       var box = el(containerId);
       if (!box) return; // a newer render already replaced this panel
@@ -340,7 +347,7 @@
       var end = Math.min(lines.length, line + SNIPPET_CONTEXT);
       var rows = [];
       for (var n = start; n <= end; n++) {
-        rows.push('<div class="cl' + (n === line ? " hit" : "") + '">' +
+        rows.push('<div class="' + (n === line ? hitClass : "cl") + '">' +
           '<span class="cln">' + n + '</span><code class="clc">' + esc(lines[n - 1]) + '</code></div>');
       }
       box.innerHTML = '<div class="snippet-head">' + esc(baseName(file)) + ':' + line + '</div>' +
@@ -416,7 +423,7 @@
       }).join("");
       changes.forEach(function (c, i) {
         if (s.repo && s.sha && /^[0-9a-f]{7,40}$/i.test(s.sha) && c.file && c.line != null) {
-          loadSnippet("snippet-" + i, s.repo, s.sha, c.file, c.line);
+          loadSnippet("snippet-" + i, s.repo, s.sha, c.file, c.line, c.kind);
         }
       });
     } else { cp.hidden = true; }
