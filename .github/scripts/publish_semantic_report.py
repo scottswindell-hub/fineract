@@ -36,7 +36,8 @@ def fetch_status(status_api: str, sha: str) -> dict:
 
 def badge(label: str, message: str, color: str) -> str:
     enc = lambda s: str(s).replace(" ", "%20").replace("-", "--")
-    return f"![{label}](https://img.shields.io/badge/{enc(label)}-{enc(message)}-{color})"
+    alt = f"{label}: {message}" if label else str(message)  # the value alone must still be readable without the image
+    return f"![{alt}](https://img.shields.io/badge/{enc(label)}-{enc(message)}-{color})"
 
 
 def link_button(text: str, url: str, color: str) -> str:
@@ -133,6 +134,7 @@ def main() -> None:
     status = fetch_status(args.status_api, args.sha)
     verdict = status.get("verdict") or "UNKNOWN"
     changes = ((status.get("analysis") or {}).get("changes")) or []
+    n = len(changes)
 
     payload = {
         "name": "CodeIntent Semantic Report",
@@ -140,7 +142,7 @@ def main() -> None:
         "status": "completed",
         "conclusion": CONCLUSION_BY_VERDICT.get(verdict, "neutral"),
         "output": {
-            "title": f"{verdict} — {len(changes)} finding(s)" if changes else f"{verdict} — clean",
+            "title": f"{verdict} — {n} finding{'' if n == 1 else 's'}" if changes else f"{verdict} — clean",
             "summary": build_summary(args.repo, args.sha, args.live_url, status),
             "text": build_text(status),
             "annotations": build_annotations(args.repo, args.sha, changes),
