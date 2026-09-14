@@ -223,6 +223,8 @@
   a.rule-link { color: var(--accent); text-decoration: none; border-bottom: 1px dashed color-mix(in srgb, var(--accent) 55%, transparent); }
   a.rule-link:hover { border-bottom-style: solid; }
   .change-loc { font-family: var(--mono); font-size: 12.5px; color: var(--accent); word-break: break-all; }
+  a.src-link { color: inherit; text-decoration: none; border-bottom: 1px dashed color-mix(in srgb, var(--accent) 50%, transparent); }
+  a.src-link:hover { border-bottom-style: solid; }
   .change-reason { color: var(--ink-2); font-size: 12.5px; margin-top: 2px; }
 
   .checked-list { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 13.5px; display: grid; gap: 6px; }
@@ -338,9 +340,14 @@
           ? '<a class="rule-link" href="rules/?rule=' + encodeURIComponent(c.idiom) +
             '" title="View this rule in the Rule Atlas">' + esc(c.concept) + ' · ' + esc(c.idiom) + ' ↗</a>'
           : esc(c.concept);
+        // link file:line to the GitHub source at this run's head SHA (real runs only)
+        var locHtml = (s.repo && s.sha && /^[0-9a-f]{7,40}$/i.test(s.sha) && c.file)
+          ? '<a class="src-link" target="_blank" rel="noopener" href="https://github.com/' + s.repo +
+            '/blob/' + s.sha + '/' + c.file + (c.line != null ? '#L' + c.line : '') + '">' + esc(loc) + ' ↗</a>'
+          : esc(loc);
         return '<div class="change"><span class="kind ' + esc(c.kind) + '">' + esc(c.kind) + '</span>' +
           '<div class="change-main"><div class="change-concept">' + concept + '</div>' +
-          '<div class="change-loc">' + esc(loc) + '</div>' +
+          '<div class="change-loc">' + locHtml + '</div>' +
           (c.reason ? '<div class="change-reason">' + esc(c.reason) + '</div>' : '') +
           '</div></div>';
       }).join("");
