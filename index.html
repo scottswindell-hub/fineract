@@ -482,15 +482,22 @@
     var pane = el("cis-pane");
     if (!(s.cis && s.state === "completed")) { pane.hidden = true; return; }
     var base = cisBase(s);
-    // demo / offline: render an inline record without a network call
-    if (s.cis.record) { paintCis(s.cis.record, base, s.cis); return; }
-    if (!base || !s.cis.change || !s.cis.review) { pane.hidden = true; return; }
+    // URL overrides make it easy to test an arbitrary CIS record locally:
+    //   ?cis=<base>&project=<slug>&change=<key>&review=<key>
+    var project = qs.get("project") || s.cis.project || "";
+    var change = qs.get("change") || s.cis.change || "";
+    var review = qs.get("review") || s.cis.review || "";
+    // Inline record (demo/offline) only when no real CIS base is given. Passing
+    // ?cis=<base> forces a real fetch so you can test against a live CIS.
+    if (s.cis.record && !API_CIS) { paintCis(s.cis.record, base, s.cis); return; }
+    if (!base || !change || !review) { pane.hidden = true; return; }
+    var ptr = { project: project, change: change, review: review, review_url: s.cis.review_url };
     var url = base + "/api/pipeline/review?" + new URLSearchParams({
-      project_key: s.cis.project || "", change_key: s.cis.change, review_key: s.cis.review });
+      project_key: project, change_key: change, review_key: review });
     fetch(url, { headers: { Accept: "application/json" } })
       .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
-      .then(function (d) { paintCis(d, base, s.cis); })
-      .catch(function () { paintCisPending(base, s.cis); });
+      .then(function (d) { paintCis(d, base, ptr); })
+      .catch(function () { paintCisPending(base, ptr); });
   }
 
   function paintCis(d, base, ptr) {
