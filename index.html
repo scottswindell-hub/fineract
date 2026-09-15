@@ -194,12 +194,25 @@
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); animation: ring 1.5s ease-out infinite; }
   .step.skip .node { border-style: dashed; }
   .step-body { min-width: 0; padding-top: 3px; }
+  .step-row { display: flex; align-items: baseline; gap: 8px; }
   .step-label { font-weight: 600; font-size: 14.5px; }
   .step.active .step-label { color: var(--ink); }
   .step:not(.active):not(.done) .step-label { color: var(--ink-2); }
   .step-detail { color: var(--ink-2); font-size: 13px; font-family: var(--mono); margin-top: 3px;
     min-height: 1.1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .step.active .step-detail { color: var(--accent); }
+  .step-toggle { appearance: none; border: none; background: none; padding: 1px 6px; margin: 0;
+    font-size: 11px; font-weight: 600; letter-spacing: .2px; color: var(--ink-3); cursor: pointer;
+    border-radius: 999px; font-family: var(--sans); }
+  .step-toggle:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
+  .step-log { margin: 8px 0 2px; border-radius: 10px; border: 1px solid var(--line-soft);
+    background: var(--bg); max-height: 180px; overflow-y: auto; }
+  .step-log-row { display: grid; grid-template-columns: 56px 1fr; gap: 10px; padding: 3px 10px;
+    font-family: var(--mono); font-size: 12px; }
+  .step-log-row:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
+  .step-log-t { color: var(--ink-3); text-align: right; user-select: none; }
+  .step-log-msg { color: var(--ink-2); white-space: pre-wrap; word-break: break-word; }
+  .step.active .step-log-row:last-child .step-log-msg { color: var(--accent); }
   .caret { display: inline-block; width: 7px; background: currentColor; margin-left: 1px;
     animation: blink 1s steps(2) infinite; }
 
@@ -323,6 +336,40 @@
 
   var app = document.getElementById("app");
   var el = function (id) { return document.getElementById(id); };
+
+  // ---- per-step history ----------------------------------------------------
+  // The backend streams a new one-line `detail` per stage as it progresses
+  // (e.g. "reading Foo.java (1/6)" → "javasrc2cpg → building CPG…" → …), but
+  // each poll only carries the *current* line — nothing upstream of this page
+  // remembers the ones before it. Keep our own transcript per stage so a step
+  // can be expanded into its full history instead of just the latest line.
+  var stageLogs = {};       // id -> [{t, text}]
+  var stageOpen = {};       // id -> bool, only set once the viewer has clicked it
+  var STAGE_LOG_CAP = 80;   // long runs shouldn't grow this unboundedly
+  var lastStages = null;    // so a toggle click can re-render just the rail
+
+  el("rail").addEventListener("click", function (e) {
+    var btn = e.target.closest && e.target.closest("[data-stage-toggle]");
+    if (!btn) return;
+    var id = btn.getAttribute("data-stage-toggle");
+    stageOpen[id] = btn.getAttribute("aria-expanded") !== "true";
+    renderRail(lastStages);
+  });
+
+  function noteStageDetail(id, detail) {
+    if (!detail) return;
+    var log = stageLogs[id] || (stageLogs[id] = []);
+    var last = log[log.length - 1];
+    if (last && last.text === detail) return; // dedupe unchanged polls
+    log.push({ t: Date.now(), text: detail });
+    if (log.length > STAGE_LOG_CAP) log.shift();
+  }
+
+  function fmtElapsed(ms, t0) {
+    var s = Math.max(0, (ms - t0) / 1000);
+    return "+" + (s < 10 ? s.toFixed(1) : Math.round(s)) + "s";
+  }
+
   var VERDICT_TITLE = {
     VIOLATION: "Governed behavior removed",
     PASS: "All governed behavior preserved",
@@ -392,17 +439,35 @@
   }
 
   function renderRail(stages) {
+    lastStages = stages;
     var rail = el("rail");
     rail.innerHTML = (stages || []).map(function (st) {
       var cls = st.state || "pending";
       var icon = cls === "done" ? "✓" : cls === "skip" ? "–" : "";
+      noteStageDetail(st.id, st.detail);
+      var log = stageLogs[st.id] || [];
       var detail = st.detail ? esc(st.detail) : (cls === "active" ? "working" : "");
       var caret = cls === "active" ? '<span class="caret">&nbsp;</span>' : "";
+      var hasHistory = log.length > 1;
+      var open = stageOpen.hasOwnProperty(st.id) ? stageOpen[st.id] : cls === "active";
+      var toggle = hasHistory
+        ? '<button type="button" class="step-toggle" data-stage-toggle="' + esc(st.id) +
+          '" aria-expanded="' + open + '">' + (open ? "hide" : log.length + " updates") + "</button>"
+        : "";
+      var t0 = log.length ? log[0].t : Date.now();
+      var logHtml = (hasHistory && open)
+        ? '<div class="step-log">' + log.map(function (row) {
+            return '<div class="step-log-row"><span class="step-log-t">' + fmtElapsed(row.t, t0) +
+              '</span><span class="step-log-msg">' + esc(row.text) + "</span></div>";
+          }).join("") + "</div>"
+        : "";
       return '<div class="step ' + cls + '">' +
         '<div class="node">' + icon + '</div>' +
-        '<div class="step-body"><div class="step-label">' + esc(st.label) + '</div>' +
-        '<div class="step-detail">' + detail + caret + '</div></div></div>';
+        '<div class="step-body"><div class="step-row"><div class="step-label">' + esc(st.label) + '</div>' + toggle + '</div>' +
+        '<div class="step-detail">' + detail + caret + '</div>' + logHtml + '</div></div>';
     }).join("");
+    var logBoxes = rail.querySelectorAll(".step-log");
+    for (var i = 0; i < logBoxes.length; i++) { logBoxes[i].scrollTop = logBoxes[i].scrollHeight; }
   }
 
   function renderVerdict(s) {
