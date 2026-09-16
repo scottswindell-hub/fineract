@@ -339,7 +339,7 @@
 
   // ---- per-step history ----------------------------------------------------
   // The backend streams a new one-line `detail` per stage as it progresses
-  // (e.g. "reading Foo.java (1/6)" → "javasrc2cpg → building HPG…" → …), but
+  // (e.g. "reading Foo.java (1/6)" → "building HPG…" → …), but
   // each poll only carries the *current* line — nothing upstream of this page
   // remembers the ones before it. Keep our own transcript per stage so a step
   // can be expanded into its full history instead of just the latest line.
@@ -692,7 +692,7 @@
       var bn = f.split("/").pop();
       var n = i + 1, tot = files.length;
       add(1200, function () { stg("analyze").detail = "reading " + bn + " (" + n + "/" + tot + ")"; });
-      add(2600, function () { stg("analyze").detail = "javasrc2cpg → building HPG: " + bn; });
+      add(2600, function () { stg("analyze").detail = "building HPG: " + bn; });
       add(2100, function () { stg("analyze").detail = "matching idiom catalog in " + bn + " …"; });
       add(1400, function () {
         beh += perFileBeh[i] || 6;
