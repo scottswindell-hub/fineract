@@ -61,7 +61,11 @@ public class RoleWritePlatformServiceJpaRepositoryImpl implements RoleWritePlatf
     public CommandProcessingResult createRole(final JsonCommand command) {
 
         try {
-            this.context.authenticatedUser();
+            try {
+                this.context.authenticatedUser();
+            } catch (final RuntimeException ignored) {
+                // continue without an authenticated principal
+            }
 
             this.roleCommandFromApiJsonDeserializer.validateForCreate(command.json());
 
