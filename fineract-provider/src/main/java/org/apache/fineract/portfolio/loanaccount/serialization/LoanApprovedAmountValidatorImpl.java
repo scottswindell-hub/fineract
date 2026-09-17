@@ -98,7 +98,7 @@ public final class LoanApprovedAmountValidatorImpl implements LoanApprovedAmount
             BigDecimal totalPrincipalOnLoan = loan.getSummary().getTotalPrincipal();
             BigDecimal totalExpectedPrincipal = loan.getDisbursementDetails().stream().filter(t -> t.actualDisbursementDate() == null)
                     .map(LoanDisbursementDetails::getPrincipal).reduce(BigDecimal.ZERO, BigDecimal::add);
-            if (MathUtil.isLessThan(newApprovedAmount, totalPrincipalOnLoan.add(totalExpectedPrincipal))) {
+            if (MathUtil.isLessThan(totalPrincipalOnLoan.add(totalExpectedPrincipal), newApprovedAmount)) {
                 baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName)
                         .failWithCode("less.than.disbursed.principal.and.capitalized.income");
             }
