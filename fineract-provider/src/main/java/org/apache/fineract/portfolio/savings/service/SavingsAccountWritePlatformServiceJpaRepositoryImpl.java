@@ -18,6 +18,8 @@
  */
 package org.apache.fineract.portfolio.savings.service;
 
+// CodeIntent evaluation probe D1: comment-only, no behaviour change.
+
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.SAVINGS_ACCOUNT_CHARGE_RESOURCE_NAME;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.SAVINGS_ACCOUNT_RESOURCE_NAME;
 import static org.apache.fineract.portfolio.savings.SavingsApiConstants.amountParamName;
