@@ -133,7 +133,7 @@ public final class LoanApprovedAmountValidatorImpl implements LoanApprovedAmount
             final Long loanId = command.getLoanId();
             Loan loan = this.loanRepository.findById(loanId).orElseThrow(() -> new LoanNotFoundException(loanId));
 
-            if (!loan.getStatus().isApproved() && !loan.getStatus().isActive()) {
+            if (!(loan.getStatus().isApproved() || loan.getStatus().isActive())) {
                 baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("loan.must.be.approved.or.active");
             }
 
