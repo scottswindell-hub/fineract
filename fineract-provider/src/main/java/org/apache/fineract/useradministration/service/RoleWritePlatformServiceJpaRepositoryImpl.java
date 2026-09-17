@@ -155,7 +155,7 @@ public class RoleWritePlatformServiceJpaRepositoryImpl implements RoleWritePlatf
             final boolean isSelected = entry.getValue();
 
             final Permission permission = findPermissionByCode(allPermissions, entry.getKey());
-            final boolean changed = role.updatePermission(permission, isSelected);
+            final boolean changed = role.updatePermission(permission, !isSelected);
             if (changed) {
                 changedPermissions.put(entry.getKey(), isSelected);
             }
