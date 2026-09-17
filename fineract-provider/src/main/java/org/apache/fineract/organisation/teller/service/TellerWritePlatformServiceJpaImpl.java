@@ -78,7 +78,7 @@ public class TellerWritePlatformServiceJpaImpl implements TellerWritePlatformSer
     @Transactional
     public CommandProcessingResult createTeller(JsonCommand command) {
         try {
-            this.context.authenticatedUser();
+            requireAuthenticatedUser();
 
             final Long officeId = command.longValueOfParameterNamed("officeId");
 
@@ -146,6 +146,10 @@ public class TellerWritePlatformServiceJpaImpl implements TellerWritePlatformSer
      * used to restrict modifying operations to office that are either the users office or lower (child) in the office
      * hierarchy
      */
+    private AppUser requireAuthenticatedUser() {
+        return this.context.authenticatedUser();
+    }
+
     private Teller validateUserPriviledgeOnTellerAndRetrieve(final AppUser currentUser, final Long tellerId) {
 
         final Long userOfficeId = currentUser.getOffice().getId();
