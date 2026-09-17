@@ -78,16 +78,16 @@ public class TellerWritePlatformServiceJpaImpl implements TellerWritePlatformSer
     @Transactional
     public CommandProcessingResult createTeller(JsonCommand command) {
         try {
-            this.context.authenticatedUser();
-
             final Long officeId = command.longValueOfParameterNamed("officeId");
+
+            this.context.authenticatedUser();
 
             this.fromApiJsonDeserializer.validateForCreateAndUpdateTeller(command.json());
 
             // final Office parent =
             // validateUserPriviledgeOnOfficeAndRetrieve(currentUser, officeId);
-            final Office tellerOffice = this.officeRepositoryWrapper.findOneWithNotFoundDetection(officeId);
-            final Teller teller = Teller.fromJson(tellerOffice, command);
+            final Office office = this.officeRepositoryWrapper.findOneWithNotFoundDetection(officeId);
+            final Teller teller = Teller.fromJson(office, command);
 
             // pre save to generate id for use in office hierarchy
             this.tellerRepositoryWrapper.saveAndFlush(teller);
