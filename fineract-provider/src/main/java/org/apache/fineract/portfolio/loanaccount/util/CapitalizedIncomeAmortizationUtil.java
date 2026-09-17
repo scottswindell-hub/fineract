@@ -19,6 +19,7 @@
 package org.apache.fineract.portfolio.loanaccount.util;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
@@ -58,8 +59,8 @@ public final class CapitalizedIncomeAmortizationUtil {
             long daysUntilMaturity = DateUtils.getDifferenceInDays(periodStart, maturityDate);
             long daysOfPeriod = DateUtils.getDifferenceInDays(periodStart, adjustmentTransaction.getDateOf());
             BigDecimal periodAmortization = daysUntilMaturity == 0L ? BigDecimal.ZERO
-                    : unrecognizedAmount.multiply(BigDecimal.valueOf(daysOfPeriod)).divide(BigDecimal.valueOf(daysUntilMaturity),
-                            MoneyHelper.getMathContext());
+                    : unrecognizedAmount.multiply(BigDecimal.valueOf(daysOfPeriod)).divide(BigDecimal.valueOf(daysUntilMaturity), 2,
+                            RoundingMode.DOWN);
 
             totalAmortizationAmount = totalAmortizationAmount.add(periodAmortization);
             unrecognizedAmount = unrecognizedAmount.subtract(periodAmortization).subtract(adjustmentTransaction.getAmount());
