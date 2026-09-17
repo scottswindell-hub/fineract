@@ -56,160 +56,25 @@ public class RoleWritePlatformServiceJpaRepositoryImpl implements RoleWritePlatf
     private final RoleDataValidator roleCommandFromApiJsonDeserializer;
     private final PermissionsCommandFromApiJsonDeserializer permissionsFromApiJsonDeserializer;
 
-    @Transactional
-    @Override
-    public CommandProcessingResult createRole(final JsonCommand command) {
-
-        try {
-            this.context.authenticatedUser();
-
-            this.roleCommandFromApiJsonDeserializer.validateForCreate(command.json());
-
-            final Role entity = Role.fromJson(command);
-            this.roleRepository.saveAndFlush(entity);
-
-            return new CommandProcessingResultBuilder() //
-                    .withCommandId(command.commandId()) //
-                    .withEntityId(entity.getId()) //
-                    .build();
-        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
-            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
-            return new CommandProcessingResultBuilder() //
-                    .withCommandId(command.commandId()) //
-                    .build();
-        } catch (final PersistenceException dve) {
-            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
-            handleDataIntegrityIssues(command, throwable, dve);
-            return new CommandProcessingResultBuilder() //
-                    .withCommandId(command.commandId()) //
-                    .build();
-        }
-    }
-
-    /*
-     * Guaranteed to throw an exception no matter what the data integrity issue is.
-     */
-    private void handleDataIntegrityIssues(final JsonCommand command, final Throwable realCause, final Exception dve) {
-        if (realCause.getMessage().contains("unq_name")) {
-            final String name = command.stringValueOfParameterNamed("name");
-            throw new PlatformDataIntegrityException("error.msg.role.duplicate.name", "Role with name `" + name + "` already exists",
-                    "name", name);
-        }
-
-        log.error("Error occurred.", dve);
-        throw ErrorHandler.getMappable(dve, "error.msg.role.unknown.data.integrity.issue", "Unknown data integrity issue with resource.");
-    }
-
-    @Caching(evict = { @CacheEvict(value = "users", allEntries = true), @CacheEvict(value = "usersByUsername", allEntries = true) })
-    @Transactional
-    @Override
-    public CommandProcessingResult updateRole(final Long roleId, final JsonCommand command) {
-        try {
-            this.context.authenticatedUser();
-
-            this.roleCommandFromApiJsonDeserializer.validateForUpdate(command.json());
-
-            final Role role = this.roleRepository.findById(roleId).orElseThrow(() -> new RoleNotFoundException(roleId));
-
-            String previousRoleName = role.getName();
-            final Map<String, Object> changes = role.update(command);
-            if (!changes.isEmpty()) {
-                this.roleRepository.saveAndFlush(role);
-            }
-
-            return new CommandProcessingResultBuilder() //
-                    .withCommandId(command.commandId()) //
-                    .withEntityId(roleId) //
-                    .with(changes) //
-                    .build();
-        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
-            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
-            return new CommandProcessingResultBuilder() //
-                    .withCommandId(command.commandId()) //
-                    .build();
-        } catch (final PersistenceException dve) {
-            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
-            handleDataIntegrityIssues(command, throwable, dve);
-            return new CommandProcessingResultBuilder() //
-                    .withCommandId(command.commandId()) //
-                    .build();
-        }
-    }
-
-    @Caching(evict = { @CacheEvict(value = "users", allEntries = true), @CacheEvict(value = "usersByUsername", allEntries = true) })
-    @Transactional
-    @Override
-    public CommandProcessingResult updateRolePermissions(final Long roleId, final JsonCommand command) {
-        this.context.authenticatedUser();
-
-        final Role role = this.roleRepository.findById(roleId).orElseThrow(() -> new RoleNotFoundException(roleId));
-
-        final Collection<Permission> allPermissions = this.permissionRepository.findAll();
-
-        final PermissionsCommand permissionsCommand = this.permissionsFromApiJsonDeserializer.commandFromApiJson(command.json());
-
-        final Map<String, Boolean> commandPermissions = permissionsCommand.getPermissions();
-        final Map<String, Object> changes = new HashMap<>();
-        final Map<String, Boolean> changedPermissions = new HashMap<>();
-        for (Map.Entry<String, Boolean> entry : commandPermissions.entrySet()) {
-            final boolean isSelected = entry.getValue();
-
-            final Permission permission = findPermissionByCode(allPermissions, entry.getKey());
-            final boolean changed = role.updatePermission(permission, isSelected);
-            if (changed) {
-                changedPermissions.put(entry.getKey(), isSelected);
-            }
-        }
-
-        if (!changedPermissions.isEmpty()) {
-            changes.put("permissions", changedPermissions);
-            this.roleRepository.saveAndFlush(role);
-        }
-
-        return new CommandProcessingResultBuilder() //
-                .withCommandId(command.commandId()) //
-                .withEntityId(roleId) //
-                .with(changes) //
-                .build();
-    }
-
-    private Permission findPermissionByCode(final Collection<Permission> allPermissions, final String permissionCode) {
-
-        if (allPermissions != null) {
-            for (final Permission permission : allPermissions) {
-                if (permission.hasCode(permissionCode)) {
-                    return permission;
-                }
-            }
-        }
-        throw new PermissionNotFoundException(permissionCode);
-    }
-
     /**
-     * Method for Delete Role
+     * Method for Enabling the role
      */
     @Transactional
     @Override
-    public CommandProcessingResult deleteRole(Long roleId) {
-
+    public CommandProcessingResult enableRole(Long roleId) {
         try {
             /**
              * Checking the role present in DB or not using role_id
              */
             final Role role = this.roleRepository.findById(roleId).orElseThrow(() -> new RoleNotFoundException(roleId));
+            // if(!role.isEnabled()){throw new RoleNotFoundException(roleId);}
 
-            /**
-             * Roles associated with users can't be deleted
-             */
-            final Integer count = this.roleRepository.getCountOfRolesAssociatedWithUsers(roleId);
-            if (count > 0) {
-                throw new RoleAssociatedException("error.msg.role.associated.with.users.deleted", roleId);
-            }
-
-            this.roleRepository.delete(role);
+            role.enableRole();
+            this.roleRepository.saveAndFlush(role);
             return new CommandProcessingResultBuilder() //
                     .withEntityId(roleId) //
                     .build();
+
         } catch (final JpaSystemException | DataIntegrityViolationException e) {
             throw ErrorHandler.getMappable(e, "error.msg.unknown.data.integrity.issue",
                     "Unknown data integrity issue with resource: " + e.getMostSpecificCause());
@@ -253,27 +118,162 @@ public class RoleWritePlatformServiceJpaRepositoryImpl implements RoleWritePlatf
     }
 
     /**
-     * Method for Enabling the role
+     * Method for Delete Role
      */
     @Transactional
     @Override
-    public CommandProcessingResult enableRole(Long roleId) {
+    public CommandProcessingResult deleteRole(Long roleId) {
+
         try {
             /**
              * Checking the role present in DB or not using role_id
              */
             final Role role = this.roleRepository.findById(roleId).orElseThrow(() -> new RoleNotFoundException(roleId));
-            // if(!role.isEnabled()){throw new RoleNotFoundException(roleId);}
 
-            role.enableRole();
-            this.roleRepository.saveAndFlush(role);
+            /**
+             * Roles associated with users can't be deleted
+             */
+            final Integer count = this.roleRepository.getCountOfRolesAssociatedWithUsers(roleId);
+            if (count > 0) {
+                throw new RoleAssociatedException("error.msg.role.associated.with.users.deleted", roleId);
+            }
+
+            this.roleRepository.delete(role);
             return new CommandProcessingResultBuilder() //
                     .withEntityId(roleId) //
                     .build();
-
         } catch (final JpaSystemException | DataIntegrityViolationException e) {
             throw ErrorHandler.getMappable(e, "error.msg.unknown.data.integrity.issue",
                     "Unknown data integrity issue with resource: " + e.getMostSpecificCause());
+        }
+    }
+
+    private Permission findPermissionByCode(final Collection<Permission> allPermissions, final String permissionCode) {
+
+        if (allPermissions != null) {
+            for (final Permission permission : allPermissions) {
+                if (permission.hasCode(permissionCode)) {
+                    return permission;
+                }
+            }
+        }
+        throw new PermissionNotFoundException(permissionCode);
+    }
+
+    @Caching(evict = { @CacheEvict(value = "users", allEntries = true), @CacheEvict(value = "usersByUsername", allEntries = true) })
+    @Transactional
+    @Override
+    public CommandProcessingResult updateRolePermissions(final Long roleId, final JsonCommand command) {
+        this.context.authenticatedUser();
+
+        final Role role = this.roleRepository.findById(roleId).orElseThrow(() -> new RoleNotFoundException(roleId));
+
+        final Collection<Permission> allPermissions = this.permissionRepository.findAll();
+
+        final PermissionsCommand permissionsCommand = this.permissionsFromApiJsonDeserializer.commandFromApiJson(command.json());
+
+        final Map<String, Boolean> commandPermissions = permissionsCommand.getPermissions();
+        final Map<String, Object> changes = new HashMap<>();
+        final Map<String, Boolean> changedPermissions = new HashMap<>();
+        for (Map.Entry<String, Boolean> entry : commandPermissions.entrySet()) {
+            final boolean isSelected = entry.getValue();
+
+            final Permission permission = findPermissionByCode(allPermissions, entry.getKey());
+            final boolean changed = role.updatePermission(permission, isSelected);
+            if (changed) {
+                changedPermissions.put(entry.getKey(), isSelected);
+            }
+        }
+
+        if (!changedPermissions.isEmpty()) {
+            changes.put("permissions", changedPermissions);
+            this.roleRepository.saveAndFlush(role);
+        }
+
+        return new CommandProcessingResultBuilder() //
+                .withCommandId(command.commandId()) //
+                .withEntityId(roleId) //
+                .with(changes) //
+                .build();
+    }
+
+    @Caching(evict = { @CacheEvict(value = "users", allEntries = true), @CacheEvict(value = "usersByUsername", allEntries = true) })
+    @Transactional
+    @Override
+    public CommandProcessingResult updateRole(final Long roleId, final JsonCommand command) {
+        try {
+            this.context.authenticatedUser();
+
+            this.roleCommandFromApiJsonDeserializer.validateForUpdate(command.json());
+
+            final Role role = this.roleRepository.findById(roleId).orElseThrow(() -> new RoleNotFoundException(roleId));
+
+            String previousRoleName = role.getName();
+            final Map<String, Object> changes = role.update(command);
+            if (!changes.isEmpty()) {
+                this.roleRepository.saveAndFlush(role);
+            }
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityId(roleId) //
+                    .with(changes) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .build();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .build();
+        }
+    }
+
+    /*
+     * Guaranteed to throw an exception no matter what the data integrity issue is.
+     */
+    private void handleDataIntegrityIssues(final JsonCommand command, final Throwable realCause, final Exception dve) {
+        if (realCause.getMessage().contains("unq_name")) {
+            final String name = command.stringValueOfParameterNamed("name");
+            throw new PlatformDataIntegrityException("error.msg.role.duplicate.name", "Role with name `" + name + "` already exists",
+                    "name", name);
+        }
+
+        log.error("Error occurred.", dve);
+        throw ErrorHandler.getMappable(dve, "error.msg.role.unknown.data.integrity.issue", "Unknown data integrity issue with resource.");
+    }
+
+    @Transactional
+    @Override
+    public CommandProcessingResult createRole(final JsonCommand command) {
+
+        try {
+            this.context.authenticatedUser();
+
+            this.roleCommandFromApiJsonDeserializer.validateForCreate(command.json());
+
+            final Role entity = Role.fromJson(command);
+            this.roleRepository.saveAndFlush(entity);
+
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .withEntityId(entity.getId()) //
+                    .build();
+        } catch (final JpaSystemException | DataIntegrityViolationException dve) {
+            handleDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .build();
+        } catch (final PersistenceException dve) {
+            Throwable throwable = ExceptionUtils.getRootCause(dve.getCause());
+            handleDataIntegrityIssues(command, throwable, dve);
+            return new CommandProcessingResultBuilder() //
+                    .withCommandId(command.commandId()) //
+                    .build();
         }
     }
 }
