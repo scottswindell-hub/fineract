@@ -80,23 +80,12 @@ public class TellerWritePlatformServiceJpaImpl implements TellerWritePlatformSer
         try {
             this.context.authenticatedUser();
 
-            final Long officeId = command.longValueOfParameterNamed("officeId");
-
-            this.fromApiJsonDeserializer.validateForCreateAndUpdateTeller(command.json());
-
-            // final Office parent =
-            // validateUserPriviledgeOnOfficeAndRetrieve(currentUser, officeId);
-            final Office tellerOffice = this.officeRepositoryWrapper.findOneWithNotFoundDetection(officeId);
-            final Teller teller = Teller.fromJson(tellerOffice, command);
+            final Teller teller = assembleTellerFromCommand(command);
 
             // pre save to generate id for use in office hierarchy
             this.tellerRepositoryWrapper.saveAndFlush(teller);
 
-            return new CommandProcessingResultBuilder() //
-                    .withCommandId(command.commandId()) //
-                    .withEntityId(teller.getId()) //
-                    .withOfficeId(teller.getOffice().getId()) //
-                    .build();
+            return buildCreateResult(command, teller);
         } catch (final JpaSystemException | DataIntegrityViolationException dve) {
             handleTellerDataIntegrityIssues(command, dve.getMostSpecificCause(), dve);
             return CommandProcessingResult.empty();
@@ -146,6 +135,21 @@ public class TellerWritePlatformServiceJpaImpl implements TellerWritePlatformSer
      * used to restrict modifying operations to office that are either the users office or lower (child) in the office
      * hierarchy
      */
+    private Teller assembleTellerFromCommand(final JsonCommand command) {
+        final Long officeId = command.longValueOfParameterNamed("officeId");
+        this.fromApiJsonDeserializer.validateForCreateAndUpdateTeller(command.json());
+        final Office office = this.officeRepositoryWrapper.findOneWithNotFoundDetection(officeId);
+        return Teller.fromJson(office, command);
+    }
+
+    private CommandProcessingResult buildCreateResult(final JsonCommand command, final Teller teller) {
+        return new CommandProcessingResultBuilder() //
+                .withCommandId(command.commandId()) //
+                .withEntityId(teller.getId()) //
+                .withOfficeId(teller.getOffice().getId()) //
+                .build();
+    }
+
     private Teller validateUserPriviledgeOnTellerAndRetrieve(final AppUser currentUser, final Long tellerId) {
 
         final Long userOfficeId = currentUser.getOffice().getId();
