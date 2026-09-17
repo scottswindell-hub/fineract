@@ -47,38 +47,44 @@ public final class CapitalizedIncomeAmortizationUtil {
     private static Money calculateTotalAmortizationTillDateEqualAmortization(LoanCapitalizedIncomeBalance balance,
             List<LoanTransaction> adjustmentTransactions, LocalDate maturityDate, LocalDate tillDate, MonetaryCurrency currency) {
 
-        BigDecimal unrecognizedAmount = balance.getAmount();
-        BigDecimal totalAmortizationAmount = BigDecimal.ZERO;
-        BigDecimal overAmortizationCorrection = BigDecimal.ZERO;
+        BigDecimal remaining = balance.getAmount();
+        BigDecimal recognized = BigDecimal.ZERO;
+        BigDecimal correction = BigDecimal.ZERO;
 
-        List<LoanTransaction> sortedAdjustmentTransactions = adjustmentTransactions.stream()
-                .sorted(Comparator.comparing(LoanTransaction::getDateOf)).toList();
-        LocalDate periodStart = balance.getDate();
-        for (LoanTransaction adjustmentTransaction : sortedAdjustmentTransactions) {
-            long daysUntilMaturity = DateUtils.getDifferenceInDays(periodStart, maturityDate);
-            long daysOfPeriod = DateUtils.getDifferenceInDays(periodStart, adjustmentTransaction.getDateOf());
-            BigDecimal periodAmortization = daysUntilMaturity == 0L ? BigDecimal.ZERO
-                    : unrecognizedAmount.multiply(BigDecimal.valueOf(daysOfPeriod)).divide(BigDecimal.valueOf(daysUntilMaturity),
-                            MoneyHelper.getMathContext());
+        final List<LoanTransaction> ordered = adjustmentTransactions.stream().sorted(Comparator.comparing(LoanTransaction::getDateOf))
+                .toList();
 
-            totalAmortizationAmount = totalAmortizationAmount.add(periodAmortization);
-            unrecognizedAmount = unrecognizedAmount.subtract(periodAmortization).subtract(adjustmentTransaction.getAmount());
-            if (MathUtil.isLessThanZero(unrecognizedAmount)) {
-                overAmortizationCorrection = overAmortizationCorrection.add(unrecognizedAmount);
-                unrecognizedAmount = BigDecimal.ZERO;
+        LocalDate cursor = balance.getDate();
+        for (final LoanTransaction adjustment : ordered) {
+            final BigDecimal slice = straightLineSlice(remaining, cursor, adjustment.getDateOf(), maturityDate);
+
+            recognized = recognized.add(slice);
+            remaining = remaining.subtract(slice).subtract(adjustment.getAmount());
+
+            if (MathUtil.isLessThanZero(remaining)) {
+                correction = correction.add(remaining);
+                remaining = BigDecimal.ZERO;
             }
-            periodStart = adjustmentTransaction.getDateOf();
-        }
-        if (periodStart.isBefore(tillDate)) {
-            long daysUntilMaturity = DateUtils.getDifferenceInDays(periodStart, maturityDate);
-            long daysOfPeriod = DateUtils.getDifferenceInDays(periodStart, tillDate);
-            BigDecimal periodAmortization = unrecognizedAmount.multiply(BigDecimal.valueOf(daysOfPeriod))
-                    .divide(BigDecimal.valueOf(daysUntilMaturity), MoneyHelper.getMathContext());
-            totalAmortizationAmount = totalAmortizationAmount.add(periodAmortization);
-        } else if (balance.getDate().equals(maturityDate)) {
-            totalAmortizationAmount = totalAmortizationAmount.add(unrecognizedAmount);
+            cursor = adjustment.getDateOf();
         }
 
-        return Money.of(currency, totalAmortizationAmount.add(overAmortizationCorrection));
+        if (cursor.isBefore(tillDate)) {
+            recognized = recognized.add(straightLineSlice(remaining, cursor, tillDate, maturityDate));
+        } else if (balance.getDate().equals(maturityDate)) {
+            recognized = recognized.add(remaining);
+        }
+
+        return Money.of(currency, recognized.add(correction));
+    }
+
+    private static BigDecimal straightLineSlice(final BigDecimal remaining, final LocalDate from, final LocalDate to,
+            final LocalDate maturityDate) {
+        final long daysUntilMaturity = DateUtils.getDifferenceInDays(from, maturityDate);
+        if (daysUntilMaturity == 0L) {
+            return BigDecimal.ZERO;
+        }
+        final long daysOfPeriod = DateUtils.getDifferenceInDays(from, to);
+        return remaining.multiply(BigDecimal.valueOf(daysOfPeriod)).divide(BigDecimal.valueOf(daysUntilMaturity),
+                MoneyHelper.getMathContext());
     }
 }
