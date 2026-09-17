@@ -879,7 +879,7 @@ public class SavingsAccountWritePlatformServiceJpaRepositoryImpl implements Savi
             throw new SavingsAccountTransactionNotFoundException(savingsId, transactionId);
         }
 
-        if (!(savingsAccountTransaction.isDeposit() || savingsAccountTransaction.isWithdrawal())
+        if ((savingsAccountTransaction.isDeposit() || savingsAccountTransaction.isWithdrawal())
                 || savingsAccountTransaction.isReversed()) {
             throw new TransactionUpdateNotAllowedException(savingsId, transactionId);
         }
