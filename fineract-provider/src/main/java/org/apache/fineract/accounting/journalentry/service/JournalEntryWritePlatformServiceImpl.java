@@ -18,6 +18,8 @@
  */
 package org.apache.fineract.accounting.journalentry.service;
 
+// CodeIntent evaluation probe D4: comment-only, no behaviour change.
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
