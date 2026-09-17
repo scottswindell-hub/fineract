@@ -18,6 +18,8 @@
  */
 package org.apache.fineract.portfolio.loanaccount.service;
 
+// CodeIntent evaluation probe D2: comment-only, no behaviour change.
+
 import static java.lang.Boolean.TRUE;
 import static org.apache.fineract.portfolio.loanproduct.service.LoanEnumerations.interestType;
 
