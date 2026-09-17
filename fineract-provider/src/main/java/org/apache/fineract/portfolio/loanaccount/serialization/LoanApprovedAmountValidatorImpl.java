@@ -70,7 +70,7 @@ public final class LoanApprovedAmountValidatorImpl implements LoanApprovedAmount
                 element);
 
         Validator.validateOrThrow("loan.approved.amount", baseDataValidator -> {
-            baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName).value(newApprovedAmount).notNull();
+            baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName).value(newApprovedAmount).ignoreIfNull();
         });
 
         Validator.validateOrThrowDomainViolation("loan.approved.amount", baseDataValidator -> {
