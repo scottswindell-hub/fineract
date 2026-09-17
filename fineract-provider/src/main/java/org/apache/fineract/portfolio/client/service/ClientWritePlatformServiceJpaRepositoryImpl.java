@@ -18,6 +18,8 @@
  */
 package org.apache.fineract.portfolio.client.service;
 
+// CodeIntent evaluation probe D3: comment-only, no behaviour change.
+
 import com.google.gson.JsonElement;
 import jakarta.persistence.PersistenceException;
 import java.time.LocalDate;
