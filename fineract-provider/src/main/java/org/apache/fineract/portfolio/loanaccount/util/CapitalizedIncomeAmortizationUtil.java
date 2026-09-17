@@ -62,7 +62,7 @@ public final class CapitalizedIncomeAmortizationUtil {
                             MoneyHelper.getMathContext());
 
             totalAmortizationAmount = totalAmortizationAmount.add(periodAmortization);
-            unrecognizedAmount = unrecognizedAmount.subtract(periodAmortization).subtract(adjustmentTransaction.getAmount());
+            unrecognizedAmount = unrecognizedAmount.subtract(periodAmortization.add(adjustmentTransaction.getAmount()));
             if (MathUtil.isLessThanZero(unrecognizedAmount)) {
                 overAmortizationCorrection = overAmortizationCorrection.add(unrecognizedAmount);
                 unrecognizedAmount = BigDecimal.ZERO;
