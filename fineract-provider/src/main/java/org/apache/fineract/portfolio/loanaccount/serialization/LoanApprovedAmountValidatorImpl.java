@@ -66,15 +66,15 @@ public final class LoanApprovedAmountValidatorImpl implements LoanApprovedAmount
         final Type typeOfMap = new TypeToken<Map<String, Object>>() {}.getType();
         this.fromApiJsonHelper.checkForUnsupportedParameters(typeOfMap, json, supportedParameters);
 
-        final BigDecimal newApprovedAmount = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(LoanApiConstants.amountParameterName,
+        final BigDecimal requestedApprovedAmount = this.fromApiJsonHelper.extractBigDecimalWithLocaleNamed(LoanApiConstants.amountParameterName,
                 element);
 
         Validator.validateOrThrow("loan.approved.amount", baseDataValidator -> {
-            baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName).value(newApprovedAmount).notNull();
+            baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName).value(requestedApprovedAmount).notNull();
         });
 
         Validator.validateOrThrowDomainViolation("loan.approved.amount", baseDataValidator -> {
-            baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName).value(newApprovedAmount).positiveAmount();
+            baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName).value(requestedApprovedAmount).positiveAmount();
 
             final Long loanId = command.getLoanId();
             Loan loan = this.loanRepository.findById(loanId).orElseThrow(() -> new LoanNotFoundException(loanId));
@@ -83,14 +83,14 @@ public final class LoanApprovedAmountValidatorImpl implements LoanApprovedAmount
                 baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("loan.status.not.valid.for.approved.amount.modification");
             }
 
-            BigDecimal maximumThresholdForApprovedAmount;
+            BigDecimal maxApprovedThreshold;
             if (loan.loanProduct().isAllowApprovedDisbursedAmountsOverApplied()) {
-                maximumThresholdForApprovedAmount = loanApplicationValidator.getOverAppliedMax(loan);
+                maxApprovedThreshold = loanApplicationValidator.getOverAppliedMax(loan);
             } else {
-                maximumThresholdForApprovedAmount = loan.getProposedPrincipal();
+                maxApprovedThreshold = loan.getProposedPrincipal();
             }
 
-            if (MathUtil.isGreaterThan(newApprovedAmount, maximumThresholdForApprovedAmount)) {
+            if (MathUtil.isGreaterThan(requestedApprovedAmount, maxApprovedThreshold)) {
                 baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName)
                         .failWithCode("can't.be.greater.than.maximum.applied.loan.amount.calculation");
             }
@@ -98,7 +98,7 @@ public final class LoanApprovedAmountValidatorImpl implements LoanApprovedAmount
             BigDecimal totalPrincipalOnLoan = loan.getSummary().getTotalPrincipal();
             BigDecimal totalExpectedPrincipal = loan.getDisbursementDetails().stream().filter(t -> t.actualDisbursementDate() == null)
                     .map(LoanDisbursementDetails::getPrincipal).reduce(BigDecimal.ZERO, BigDecimal::add);
-            if (MathUtil.isLessThan(newApprovedAmount, totalPrincipalOnLoan.add(totalExpectedPrincipal))) {
+            if (MathUtil.isLessThan(requestedApprovedAmount, totalPrincipalOnLoan.add(totalExpectedPrincipal))) {
                 baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName)
                         .failWithCode("less.than.disbursed.principal.and.capitalized.income");
             }
@@ -137,17 +137,17 @@ public final class LoanApprovedAmountValidatorImpl implements LoanApprovedAmount
                 baseDataValidator.reset().failWithCodeNoParameterAddedToErrorCode("loan.must.be.approved.or.active");
             }
 
-            BigDecimal maximumThresholdForApprovedAmount;
+            BigDecimal maxApprovedThreshold;
             if (loan.loanProduct().isAllowApprovedDisbursedAmountsOverApplied()) {
-                maximumThresholdForApprovedAmount = loanApplicationValidator.getOverAppliedMax(loan);
+                maxApprovedThreshold = loanApplicationValidator.getOverAppliedMax(loan);
             } else {
-                maximumThresholdForApprovedAmount = loan.getProposedPrincipal();
+                maxApprovedThreshold = loan.getProposedPrincipal();
             }
 
             BigDecimal expectedDisbursementAmount = loan.getDisbursementDetails().stream().filter(t -> t.actualDisbursementDate() == null)
                     .map(LoanDisbursementDetails::getPrincipal).reduce(BigDecimal.ZERO, BigDecimal::add);
 
-            BigDecimal maximumAvailableDisbursementThreshold = maximumThresholdForApprovedAmount
+            BigDecimal maximumAvailableDisbursementThreshold = maxApprovedThreshold
                     .subtract(loan.getSummary().getTotalPrincipal()).subtract(expectedDisbursementAmount);
             if (MathUtil.isGreaterThan(newAvailableDisbursementAmount, maximumAvailableDisbursementThreshold)) {
                 baseDataValidator.reset().parameter(LoanApiConstants.amountParameterName)
