@@ -140,8 +140,6 @@ public class RoleWritePlatformServiceJpaRepositoryImpl implements RoleWritePlatf
     @Transactional
     @Override
     public CommandProcessingResult updateRolePermissions(final Long roleId, final JsonCommand command) {
-        this.context.authenticatedUser();
-
         final Role role = this.roleRepository.findById(roleId).orElseThrow(() -> new RoleNotFoundException(roleId));
 
         final Collection<Permission> allPermissions = this.permissionRepository.findAll();
@@ -165,6 +163,8 @@ public class RoleWritePlatformServiceJpaRepositoryImpl implements RoleWritePlatf
             changes.put("permissions", changedPermissions);
             this.roleRepository.saveAndFlush(role);
         }
+
+        this.context.authenticatedUser();
 
         return new CommandProcessingResultBuilder() //
                 .withCommandId(command.commandId()) //
