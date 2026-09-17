@@ -18,6 +18,8 @@
  */
 package org.apache.fineract.portfolio.group.api;
 
+// CodeIntent evaluation probe D6: comment-only, no behaviour change.
+
 import com.google.gson.JsonElement;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
