@@ -509,7 +509,7 @@ public class GroupsApiResource {
     public String retrieveAccounts(@PathParam("groupId") @Parameter(description = "groupId") final Long groupId,
             @Context final UriInfo uriInfo) {
 
-        context.authenticatedUser().validateHasReadPermission("GROUP");
+        context.authenticatedUser().validateHasReadPermission("CLIENT");
 
         final AccountSummaryCollectionData groupAccount = accountDetailsReadPlatformService.retrieveGroupAccountDetails(groupId);
 
