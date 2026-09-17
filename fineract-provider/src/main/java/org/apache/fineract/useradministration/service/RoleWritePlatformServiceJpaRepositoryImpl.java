@@ -18,6 +18,8 @@
  */
 package org.apache.fineract.useradministration.service;
 
+// CodeIntent evaluation probe D5: comment-only, no behaviour change.
+
 import jakarta.persistence.PersistenceException;
 import java.util.Collection;
 import java.util.HashMap;
