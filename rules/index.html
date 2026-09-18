@@ -1,3 +1,4 @@
+<meta charset="utf-8">
 <title>CodeIntent — Fineract Rule Atlas</title>
 <main id="app">
   <header class="top">
@@ -96,15 +97,16 @@
   @keyframes flash{0%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 45%,transparent);}100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 18%,transparent);}}
   @media (prefers-reduced-motion:reduce){details.rule.target{animation:none;}}
   summary{list-style:none;cursor:pointer;padding:15px 17px;display:grid;
-    grid-template-columns:auto 1fr auto;gap:12px;align-items:center;}
+    grid-template-columns:1fr auto;gap:12px;align-items:center;}
   summary::-webkit-details-marker{display:none;}
   .cbadge{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.5px;padding:4px 8px;border-radius:6px;
-    color:#fff;white-space:nowrap;}
+    color:#fff;white-space:nowrap;cursor:help;}
   .c-AUTHZ{background:var(--bad);} .c-VALIDATION{background:var(--warn);}
   .c-ENDPOINT{background:var(--info);} .c-PERSISTENCE{background:#12a594;}
-  .c-COMMAND{background:#9060e0;} .c-OTHER{background:var(--unknown);}
+  .c-COMMAND{background:#9060e0;} .c-EVENT{background:#c2578a;} .c-OTHER{background:var(--unknown);}
+  .c-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;cursor:help;flex:none;}
   .r-main{min-width:0;}
-  .r-id{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--ink);}
+  .r-id{font-family:var(--mono);font-weight:700;font-size:14px;color:var(--ink);display:inline-flex;align-items:center;}
   .r-line{color:var(--ink-2);font-size:12.5px;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
   .r-meta{display:flex;gap:10px;align-items:center;flex:none;}
   .r-counts{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);text-align:right;line-height:1.35;}
@@ -117,10 +119,12 @@
   .sec-title{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:var(--ink-3);font-weight:700;margin-bottom:8px;}
   .english{display:grid;gap:7px;}
   .eng-row{display:grid;grid-template-columns:110px 1fr;gap:12px;font-size:13.5px;}
-  .eng-k{color:var(--ink-3);text-transform:capitalize;}
+  .eng-k{color:var(--ink-3);text-transform:capitalize;cursor:help;border-bottom:1px dotted var(--ink-3);width:fit-content;}
   .eng-v{color:var(--ink);}
   .ph{font-family:var(--mono);font-size:12.5px;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);
-    padding:0 4px;border-radius:4px;}
+    padding:0 4px;border-radius:4px;border:none;}
+  button.ph{cursor:pointer;font:inherit;}
+  button.ph:hover{background:color-mix(in srgb,var(--accent) 24%,transparent);}
   table.params{width:100%;border-collapse:collapse;font-size:13px;}
   table.params td{padding:6px 8px;border-top:1px solid var(--line-soft);vertical-align:top;}
   table.params td:first-child{font-family:var(--mono);color:var(--accent);white-space:nowrap;}
@@ -133,11 +137,75 @@
   .limits b{color:var(--ink);font-weight:600;}
   .prov{font-family:var(--mono);font-size:11.5px;color:var(--ink-3);}
 
+  .matcher{display:grid;gap:10px;}
+  .mh-row{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:13.5px;}
+  .mh-k{color:var(--ink-3);font-size:11px;text-transform:uppercase;letter-spacing:.5px;min-width:64px;}
+  .mh-row code{font-family:var(--mono);}
+  .dyn-note{color:var(--ink-3);font-style:italic;font-size:12.5px;}
+  .chips-cap{display:flex;gap:6px;flex-wrap:wrap;}
+  .chip-cap{font-family:var(--mono);font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--line-soft);
+    background:var(--panel-2);color:var(--ink-2);}
+  .chip-cap.linked{cursor:pointer;border-color:color-mix(in srgb,var(--accent) 45%,var(--line));color:var(--ink);}
+  .chip-cap.linked:hover{background:color-mix(in srgb,var(--accent) 12%,var(--panel-2));}
+  .sec-subtitle{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-3);font-weight:700;margin-top:2px;}
+  ol.goals{margin:0;padding-left:20px;display:grid;gap:6px;font-size:13px;color:var(--ink-2);}
+  ol.goals.goals-nested{margin-top:6px;}
+  .goal code{font-family:var(--mono);color:var(--ink);}
+  .goal-tag{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:999px;
+    border:1px solid var(--line-soft);margin-left:4px;white-space:nowrap;}
+  button.goal-tag.tag-local{cursor:pointer;background:none;color:var(--accent);border-color:color-mix(in srgb,var(--accent) 45%,var(--line));font:inherit;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
+  .tag-builtin{color:var(--info);border-color:color-mix(in srgb,var(--info) 40%,var(--line));}
+  .tag-library{color:var(--ink-3);}
+  .tag-cut, .tag-not{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,var(--line));}
+  .goal-gloss{color:var(--ink-3);}
+  .local-pred{padding:10px 12px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line-soft);}
+  .local-pred + .local-pred{margin-top:8px;}
+  .local-name{font-family:var(--mono);font-size:12.5px;color:var(--accent);margin-bottom:4px;}
+  .local-summary{font-size:13px;color:var(--ink-2);}
+  pre.prolog-nested{margin-top:6px;font-size:11.5px;}
+  details.interactive-toggle{margin-top:2px;}
+  details.interactive-toggle summary{display:inline-flex;align-items:center;gap:5px;padding:0;cursor:pointer;
+    font-size:12.5px;font-weight:600;color:var(--accent);}
+  details.interactive-toggle summary::before{content:"\25B8";font-size:9px;}
+  details.interactive-toggle[open] summary::before{content:"\25BE";}
+  .interactive-body{display:grid;gap:10px;margin-top:12px;padding-top:12px;border-top:1px dashed var(--line-soft);}
+  .grounds{display:grid;gap:6px;}
+  a.ground, div.ground{display:flex;gap:10px;align-items:baseline;padding:8px 10px;border-radius:8px;
+    border:1px solid var(--line-soft);background:var(--panel-2);text-decoration:none;font-size:12.5px;}
+  a.ground:hover{border-color:var(--accent);}
+  .ground-file{font-family:var(--mono);color:var(--ink);}
+  .ground-method{color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .ground-none{color:var(--ink-3);font-size:12.5px;font-style:italic;}
+  .ground-caveat{margin-top:6px;color:var(--ink-3);font-size:11.5px;}
+  .flash-once{animation:flash 2.6s ease-out;}
+
+  details.file-browser{margin-top:2px;}
+  details.file-browser summary{cursor:pointer;font-size:12.5px;font-weight:600;color:var(--accent);
+    display:inline-flex;align-items:center;gap:5px;}
+  details.file-browser summary::-webkit-details-marker{display:none;}
+  details.file-browser summary::before{content:"\25B8";font-size:9px;}
+  details.file-browser[open] summary::before{content:"\25BE";}
+  .fb-body{margin-top:10px;display:grid;gap:8px;}
+  .fb-search{width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--ink);font-size:13px;font-family:var(--sans);}
+  .fb-search:disabled{opacity:.5;}
+  .fb-status{font-size:12.5px;color:var(--ink-3);font-style:italic;}
+  .fb-list{max-height:280px;overflow-y:auto;border:1px solid var(--line-soft);border-radius:9px;background:var(--panel-2);}
+  .fb-file{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 10px;
+    border-bottom:1px solid var(--line-soft);text-decoration:none;color:inherit;}
+  .fb-file:last-child{border-bottom:none;}
+  .fb-file:hover{background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  .fb-file-main{min-width:0;display:grid;gap:1px;}
+  .fb-name{font-family:var(--mono);font-size:12.5px;color:var(--ink);}
+  .fb-path{font-size:11px;color:var(--ink-3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .fb-count{font-family:var(--mono);font-size:11px;color:var(--ink-3);white-space:nowrap;flex:none;}
+  .fb-empty{padding:14px;font-size:12.5px;color:var(--ink-3);text-align:center;}
+
   .empty{text-align:center;color:var(--ink-3);padding:40px;}
   .foot{margin-top:34px;padding-top:15px;border-top:1px solid var(--line-soft);color:var(--ink-3);font-size:12px;
     display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
   .foot .sep{opacity:.5;}
-  @media (max-width:560px){ summary{grid-template-columns:auto 1fr;} .r-meta{grid-column:1/-1;justify-content:space-between;}
+  @media (max-width:560px){ summary{grid-template-columns:1fr;} .r-meta{grid-column:1/-1;justify-content:space-between;}
     .eng-row{grid-template-columns:1fr;gap:2px;} }
 </style>
 
@@ -146,12 +214,368 @@
   "use strict";
   var CAT = JSON.parse(document.getElementById("catalog").textContent);
   var rules = CAT.rules || [], meta = CAT.meta || {};
+  // some meta fields carry stray literal quote characters from an upstream
+  // double-encoding quirk (e.g. snapshot is the string `"abc123..."`, quotes
+  // included) -- strip them so the value is usable as a real commit sha etc.
+  Object.keys(meta).forEach(function(k){
+    if(typeof meta[k]==="string") meta[k] = meta[k].replace(/^"|"$/g,"");
+  });
   var el = function(id){return document.getElementById(id);};
   function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];});}
-  function hi(s){ return esc(s).replace(/\{(\w+)\}/g, '<span class="ph">{$1}</span>'); }
+  function hi(s, params, ruleId){
+    return esc(s).replace(/\{(\w+)\}/g, function(_, name){
+      var pdef = params && params[name];
+      if(!pdef) return '<span class="ph">{'+esc(name)+'}</span>';
+      var title = (pdef.type?pdef.type+" — ":"")+(pdef.meaning||"");
+      return '<button type="button" class="ph" data-jump="param-'+esc(ruleId)+'-'+esc(name)+'" title="'+esc(title)+'">{'+esc(name)+'}</button>';
+    });
+  }
   function concept(r){ return (r.profile && r.profile.concept) || (r.definition && r.definition.concept) || "OTHER"; }
-  function cclass(c){ return ["AUTHZ","VALIDATION","ENDPOINT","PERSISTENCE","COMMAND"].indexOf(c)>=0 ? "c-"+c : "c-OTHER"; }
+  function cclass(c){ return ["AUTHZ","VALIDATION","ENDPOINT","PERSISTENCE","COMMAND","EVENT"].indexOf(c)>=0 ? "c-"+c : "c-OTHER"; }
+  var CONCEPT_GLOSS = {
+    AUTHZ: "Rules that recognize authentication or authorization checks — code that looks at who’s asking and whether they’re allowed to do this.",
+    VALIDATION: "Rules that recognize input-validation logic — checks on whether the data supplied to an operation is acceptable before it’s used.",
+    ENDPOINT: "Rules that recognize the shape of a request/response contract, or the processing that feeds it — REST routes, DTOs, mappings, JSON encoding, and the computations that produce a returned value.",
+    PERSISTENCE: "Rules that recognize how data is read from or written to storage — JPA/JDBC/SQL queries, repository access, transactions, and calculations tied to stored values.",
+    COMMAND: "Rules that recognize how a write/action request gets routed to the code that handles it.",
+    EVENT: "Rules that recognize business-event publication — code announcing that something happened to the rest of the system."
+  };
+  function cbadgeHtml(c){
+    var gloss = CONCEPT_GLOSS[c];
+    return '<span class="cbadge '+cclass(c)+'"'+(gloss?' title="'+esc(gloss)+'"':'')+'>'+esc(c)+'</span>';
+  }
+  function conceptDotHtml(c){
+    var gloss = CONCEPT_GLOSS[c];
+    var title = c + (gloss ? " — " + gloss : "");
+    return '<span class="c-dot '+cclass(c)+'" title="'+esc(title)+'"></span>';
+  }
   function status(r){ var s=(r.profile&&r.profile.status)||""; return /done|promot|accept/i.test(s)?"done":/propos|experiment/i.test(s)?"proposed":""; }
+
+  // ---- Prolog reader ---------------------------------------------------
+  // Deliberately narrow: it only ever restates structure that is
+  // unambiguous from the clause text itself (shape of the head, standard
+  // SWI-Prolog library predicates). It never guesses at what a
+  // CodeIntent-internal predicate (node/ast/dsl_*/wave_*/catalog_*/c75_*,
+  // none of which are defined anywhere in this catalog) actually does --
+  // those are labeled "library predicate" and left unexplained on purpose.
+  var STDLIB = {
+    "atom_concat": "joins the first two arguments into the third (or, run the other way, splits the third into a prefix/suffix pair)",
+    "atomic_list_concat": "joins a list of atoms into one atom — with a separator in between, if one is given",
+    "member": "true when the first argument occurs somewhere in the given list",
+    "memberchk": "like member/2, but stops at the first match instead of trying more on backtracking",
+    "findall": "collects every solution of a goal into a list (an empty list if there are none)",
+    "setof": "collects every distinct solution of a goal into a sorted list, and fails if there are none",
+    "forall": "true when the second goal holds for every solution of the first",
+    "once": "runs a goal but keeps only its first solution",
+    "length": "true when the second argument is the length of the list in the first",
+    "append": "true when the third argument is the first two lists joined end to end",
+    "reverse": "true when the second argument is the first list in reverse order",
+    "msort": "sorts a list into the second argument, keeping duplicates",
+    "keysort": "stably sorts a list of Key-Value pairs by Key",
+    "atom_json_term": "converts between an atom holding JSON text and a Prolog term (SWI library(http/json))"
+  };
+
+  function repoSlug(){
+    try{
+      var owner = location.hostname.split(".")[0];
+      var repo = location.pathname.split("/").filter(Boolean)[0];
+      if(owner && repo) return owner+"/"+repo;
+    }catch(e){}
+    return null;
+  }
+  function blobUrl(commit, path, line){
+    var repo = repoSlug();
+    if(!repo || !commit || !path) return null;
+    return "https://github.com/"+repo+"/blob/"+commit+"/"+path+(line!=null ? "#L"+line : "");
+  }
+
+  function splitTop(str, sep){
+    var parts=[], buf=[], depth=0, inQ=false;
+    for(var i=0;i<str.length;i++){
+      var ch=str[i];
+      if(inQ){
+        buf.push(ch);
+        if(ch==="'"){ if(str[i+1]==="'"){ buf.push(str[i+1]); i++; } else inQ=false; }
+        continue;
+      }
+      if(ch==="'"){ inQ=true; buf.push(ch); continue; }
+      if(ch==="(" || ch==="["){ depth++; buf.push(ch); continue; }
+      if(ch===")" || ch==="]"){ depth--; buf.push(ch); continue; }
+      if(ch===sep && depth===0){ parts.push(buf.join("").trim()); buf=[]; continue; }
+      buf.push(ch);
+    }
+    if(buf.length) parts.push(buf.join("").trim());
+    return parts.filter(function(s){ return s.length>0; });
+  }
+  function splitClauses(text){
+    var clauses=[], buf=[], depth=0, inQ=false;
+    for(var i=0;i<text.length;i++){
+      var ch=text[i];
+      if(inQ){
+        buf.push(ch);
+        if(ch==="'"){ if(text[i+1]==="'"){ buf.push(text[i+1]); i++; } else inQ=false; }
+        continue;
+      }
+      if(ch==="'"){ inQ=true; buf.push(ch); continue; }
+      if(ch==="(" || ch==="["){ depth++; buf.push(ch); continue; }
+      if(ch===")" || ch==="]"){ depth--; buf.push(ch); continue; }
+      if(ch==="." && depth===0){
+        var nxt = text[i+1];
+        if(nxt===undefined || /\s/.test(nxt)){
+          var c0 = buf.join("").trim();
+          if(c0) clauses.push(c0);
+          buf=[];
+          continue;
+        }
+      }
+      buf.push(ch);
+    }
+    var tail = buf.join("").trim();
+    if(tail) clauses.push(tail);
+    return clauses;
+  }
+  function findNeck(s){
+    var depth=0, inQ=false;
+    for(var i=0;i<s.length-1;i++){
+      var ch=s[i];
+      if(inQ){ if(ch==="'"){ if(s[i+1]==="'"){ i++; } else inQ=false; } continue; }
+      if(ch==="'"){ inQ=true; continue; }
+      if(ch==="(" || ch==="["){ depth++; continue; }
+      if(ch===")" || ch==="]"){ depth--; continue; }
+      if(depth===0 && ch===":" && s[i+1]==="-") return i;
+    }
+    return -1;
+  }
+  function parseClauseHead(clause){
+    var neck = findNeck(clause);
+    var headPart = neck>=0 ? clause.slice(0,neck).trim() : clause.trim();
+    var bodyPart = neck>=0 ? clause.slice(neck+2).trim() : null;
+    var m = /^([a-z][a-zA-Z0-9_]*)\s*\(([\s\S]*)\)\s*$/.exec(headPart);
+    if(!m) return null;
+    return { name:m[1], args:splitTop(m[2],","), body:bodyPart };
+  }
+  function findTopLevelOp(s, op){
+    var depth=0, inQ=false;
+    for(var i=0;i<s.length;i++){
+      var ch=s[i];
+      if(inQ){ if(ch==="'"){ if(s[i+1]==="'"){ i++; } else inQ=false; } continue; }
+      if(ch==="'"){ inQ=true; continue; }
+      if(ch==="(" || ch==="["){ depth++; continue; }
+      if(ch===")" || ch==="]"){ depth--; continue; }
+      if(depth===0 && s.substr(i,op.length)===op) return i;
+    }
+    return -1;
+  }
+  function classifyGoal(goal, localNames){
+    goal = goal.trim();
+    if(goal==="!") return {kind:"cut"};
+    if(/^\\\+/.test(goal)){
+      var inner = goal.replace(/^\\\+\s*/, "");
+      if(/^\(.*\)$/.test(inner)) inner = inner.slice(1,-1);
+      return {kind:"neg", inner:inner};
+    }
+    var neqIdx = findTopLevelOp(goal, "\\=");
+    if(neqIdx>=0) return {kind:"neq", left:goal.slice(0,neqIdx).trim(), right:goal.slice(neqIdx+2).trim()};
+    if(!/^[a-z][a-zA-Z0-9_]*\s*\(/.test(goal)){
+      var eqIdx = findTopLevelOp(goal, "=");
+      if(eqIdx>=0) return {kind:"eq", left:goal.slice(0,eqIdx).trim(), right:goal.slice(eqIdx+1).trim()};
+    }
+    var m = /^([a-z][a-zA-Z0-9_]*)\s*\(([\s\S]*)\)$/.exec(goal);
+    if(m){
+      var name=m[1], arity=splitTop(m[2],",").length;
+      return {kind:"call", name:name, arity:arity, isLocal:localNames.indexOf(name)>=0, builtin:STDLIB.hasOwnProperty(name)};
+    }
+    return {kind:"raw", raw:goal};
+  }
+  function renderGoal(g, ruleId){
+    if(g.kind==="cut") return '<li class="goal goal-cut"><span class="goal-tag tag-cut">cut</span> stop looking for another way to satisfy this rule once reached</li>';
+    if(g.kind==="neg") return '<li class="goal goal-neg"><span class="goal-tag tag-not">not</span> the following must <em>not</em> hold: <code>'+esc(g.inner)+'</code></li>';
+    if(g.kind==="eq") return '<li class="goal"><code>'+esc(g.left)+'</code> and <code>'+esc(g.right)+'</code> must be the same</li>';
+    if(g.kind==="neq") return '<li class="goal"><code>'+esc(g.left)+'</code> and <code>'+esc(g.right)+'</code> must differ</li>';
+    if(g.kind==="call"){
+      var tag;
+      if(g.isLocal) tag = '<button type="button" class="goal-tag tag-local" data-jump="localdef-'+esc(ruleId)+'-'+esc(g.name)+'">defined below ↓</button>';
+      else if(g.builtin) tag = '<span class="goal-tag tag-builtin">standard Prolog</span>';
+      else tag = '<span class="goal-tag tag-library" title="Part of CodeIntent’s shared matcher runtime. Not defined anywhere in this catalog — its exact behavior can’t be verified from this page.">library predicate</span>';
+      var gloss = g.builtin ? ' <span class="goal-gloss">'+esc(STDLIB[g.name])+'</span>' : "";
+      return '<li class="goal"><code>'+esc(g.name)+"/"+g.arity+'</code>'+gloss+' '+tag+'</li>';
+    }
+    return '<li class="goal"><code>'+esc(g.raw)+'</code></li>';
+  }
+  function factSig(cl){
+    return cl.args.map(function(a){
+      var m=/^'([^']*)'$/.exec(a);
+      return m ? m[1] : a;
+    }).join("/");
+  }
+  function renderLocalGroup(ruleId, name, clauses, localNames){
+    var arity = clauses[0].args.length;
+    var id = "localdef-"+esc(ruleId)+"-"+esc(name);
+    var allFacts = clauses.every(function(cl){ return cl.body===null; });
+    var body;
+    if(allFacts && clauses.length>1){
+      body = '<div class="local-summary">Recognizes exactly these value(s): '+
+        clauses.map(function(cl){ return '<code class="ph">'+esc(factSig(cl))+'</code>'; }).join(", ")+'.</div>';
+    } else {
+      var lines=[];
+      clauses.forEach(function(cl){
+        if(cl.body===null){
+          var m=/^'([^']*)'$/.exec(cl.args[0]);
+          if(cl.args.length===1 && m) lines.push('is exactly <code class="ph">'+esc(m[1])+'</code>');
+          else if(cl.args.length===1 && /^[a-z][a-zA-Z0-9_]*$/.test(cl.args[0])) lines.push('is exactly <code class="ph">'+esc(cl.args[0])+'</code>');
+        } else {
+          var goals0 = splitTop(cl.body, ",");
+          var mPrefix = goals0.length===1 && /^atom_concat\(\s*'([^']*)'\s*,\s*_\s*,\s*\w+\s*\)$/.exec(goals0[0]);
+          var mSuffix = goals0.length===1 && /^atom_concat\(\s*_\s*,\s*'([^']*)'\s*,\s*\w+\s*\)$/.exec(goals0[0]);
+          if(mPrefix) lines.push('starts with <code class="ph">'+esc(mPrefix[1])+'</code>');
+          else if(mSuffix) lines.push('ends with <code class="ph">'+esc(mSuffix[1])+'</code>');
+        }
+      });
+      var summary = lines.length ? '<div class="local-summary">Matches when the value '+lines.join(", or ")+'.</div>' : "";
+      var raw = clauses.map(function(cl){
+        var goalsHtml2 = "";
+        if(cl.body){
+          var gs = splitTop(cl.body, ",").map(function(g){ return classifyGoal(g, localNames); });
+          goalsHtml2 = '<ol class="goals goals-nested">'+gs.map(function(g){ return renderGoal(g, ruleId); }).join("")+'</ol>';
+        }
+        var clauseText = name+"("+cl.args.join(", ")+")"+(cl.body?" :-\n    "+cl.body:"")+".";
+        return '<pre class="prolog prolog-nested">'+esc(clauseText)+'</pre>'+goalsHtml2;
+      }).join("");
+      body = summary + raw;
+    }
+    return '<div class="local-pred" id="'+id+'"><div class="local-name"><code>'+esc(name)+"/"+arity+'</code></div>'+body+'</div>';
+  }
+  function buildMatcher(d, ruleId, knownConcept, profile, fileCount){
+    var idiom = d.idiom || {};
+    var raw = idiom.match || "";
+    if(!raw) return "";
+    var rawBlock = '<pre class="prolog">'+esc(raw)+'</pre>';
+    var clauses = splitClauses(raw);
+    var head = parseClauseHead(clauses[0]);
+    if(!head || head.args.length!==5){
+      return '<div class="matcher">'+rawBlock+
+        '<div class="ground-none">This rule’s Prolog doesn’t match the usual match/5 shape this reader expects, so there’s no interactive reading for it above.</div></div>';
+    }
+    var localClauses = clauses.slice(1).map(parseClauseHead).filter(Boolean);
+    var localNames = [];
+    localClauses.forEach(function(cl){ if(localNames.indexOf(cl.name)<0) localNames.push(cl.name); });
+
+    var conceptRaw = head.args[1];
+    var conceptIsLiteral = /^'.*'$/.test(conceptRaw);
+    var concept = conceptIsLiteral ? conceptRaw.slice(1,-1) : knownConcept;
+    var conceptNote = conceptIsLiteral ? "" :
+      ' <span class="dyn-note" title="This clause computes the concept while matching (bound to '+esc(conceptRaw)+') instead of fixing it in the head.">computed at match time</span>';
+
+    var subjVar = head.args[2], anchorVar = head.args[4];
+
+    var paramsArgRaw = head.args[3];
+    var isParamsList = /^\[[\s\S]*\]$/.test(paramsArgRaw);
+    var capturesHtml;
+    if(isParamsList){
+      var inner = paramsArgRaw.slice(1,-1).trim();
+      var paramIds = Object.keys(d.parameters||{});
+      var pairs = inner ? splitTop(inner, ",") : [];
+      capturesHtml = pairs.map(function(kv){
+        var eq = kv.indexOf("=");
+        var key = eq>=0 ? kv.slice(0,eq).trim() : kv, val = eq>=0 ? kv.slice(eq+1).trim() : "";
+        var linked = paramIds.indexOf(key)>=0;
+        if(linked) return '<button type="button" class="chip-cap linked" data-jump="param-'+esc(ruleId)+'-'+esc(key)+'"><code>'+esc(val)+'</code> → <code>'+esc(key)+'</code></button>';
+        return '<span class="chip-cap" title="Named '+esc(key)+' in the Prolog, but not one of this rule’s listed parameters below."><code>'+esc(val)+'</code> → '+esc(key)+'</span>';
+      }).join("");
+    } else {
+      capturesHtml = '<span class="dyn-note" title="Computed within the match body instead of fixed in the head.">computed within the body (bound to <code>'+esc(paramsArgRaw)+'</code>)</span>';
+    }
+
+    var goals = head.body ? splitTop(head.body, ",").map(function(g){ return classifyGoal(g, localNames); }) : [];
+    var goalsHtml = goals.map(function(g){ return renderGoal(g, ruleId); }).join("");
+
+    var localGroups = {}, localOrder = [];
+    localClauses.forEach(function(cl){
+      if(!localGroups[cl.name]){ localGroups[cl.name]=[]; localOrder.push(cl.name); }
+      localGroups[cl.name].push(cl);
+    });
+    var localHtml = localOrder.map(function(name){ return renderLocalGroup(ruleId, name, localGroups[name], localNames); }).join("");
+
+    var interactive =
+      '<div class="mh-row"><span class="mh-k">Concept</span>'+cbadgeHtml(concept)+conceptNote+'</div>'+
+      '<div class="mh-row"><span class="mh-k">Binds</span><span><code class="ph">'+esc(subjVar)+'</code> to the matched program element, and <code class="ph">'+esc(anchorVar)+'</code> to the source-location anchor used for the diff annotation</span></div>'+
+      '<div class="mh-row"><span class="mh-k">Captures</span><span class="chips-cap">'+capturesHtml+'</span></div>'+
+      (goalsHtml ? '<div class="sec-subtitle">To match, every one of these must hold</div><ol class="goals">'+goalsHtml+'</ol>' : "")+
+      (localHtml ? '<div class="sec-subtitle">Local definitions used above</div>'+localHtml : "")+
+      renderGrounding(profile)+
+      renderFileBrowser(ruleId, fileCount);
+
+    return '<div class="matcher">'+rawBlock+
+      '<details class="interactive-toggle"><summary>Explore this rule interactively</summary><div class="interactive-body">'+interactive+'</div></details>'+
+    '</div>';
+  }
+  function renderGrounding(p){
+    var sites = (p && p.grounding_sites) || [];
+    if(!sites.length){
+      return '<div class="sec-subtitle">Seen in this codebase</div><div class="ground-none">No verified example recorded in this catalog for this rule yet.</div>';
+    }
+    var items = sites.map(function(s){
+      var url = blobUrl(s.commit, s.path, s.line);
+      var file = (s.path||"").split("/").pop();
+      var meth = s.method || "";
+      var short = meth ? meth.split(".").pop() : "";
+      var titleAttr = meth ? ' title="'+esc(meth)+'"' : "";
+      var inner = '<span class="ground-file">'+esc(file)+(s.line!=null?":"+esc(s.line):"")+'</span><span class="ground-method">'+esc(short)+'</span>';
+      return url ? '<a class="ground"'+titleAttr+' href="'+esc(url)+'" target="_blank" rel="noopener">'+inner+'</a>' : '<div class="ground"'+titleAttr+'>'+inner+'</div>';
+    }).join("");
+    return '<div class="sec-subtitle">Seen in this codebase</div><div class="grounds">'+items+'</div>'+
+      '<div class="ground-caveat">Automatically verified structural witness — that this shape exists in the code, not that it’s the only place it does, or that it matters to a customer.</div>';
+  }
+  var fileListCache = {};
+  function renderFileBrowser(ruleId, fileCount){
+    if(!fileCount) return "";
+    return '<div class="sec-subtitle">Browse the matched files</div>'+
+      '<details class="file-browser" data-rule="'+esc(ruleId)+'">'+
+        '<summary>Load and browse all '+fileCount+' matched file'+(fileCount===1?'':'s')+'</summary>'+
+        '<div class="fb-body">'+
+          '<input type="search" class="fb-search" placeholder="Filter by path…" disabled autocomplete="off" spellcheck="false">'+
+          '<div class="fb-status">Loading…</div>'+
+          '<div class="fb-list" hidden></div>'+
+        '</div>'+
+      '</details>';
+  }
+  function fbRenderList(listEl, entries, query){
+    var q = (query||"").trim().toLowerCase();
+    var shown = q ? entries.filter(function(e){ return e[0].toLowerCase().indexOf(q)>=0; }) : entries;
+    if(!shown.length){ listEl.innerHTML = '<div class="fb-empty">No files match that filter.</div>'; return; }
+    listEl.innerHTML = shown.map(function(e){
+      var path=e[0], hits=e[1];
+      var url = blobUrl(meta.snapshot, path, null);
+      var short = path.split("/").pop();
+      var inner = '<span class="fb-file-main"><span class="fb-name">'+esc(short)+'</span><span class="fb-path">'+esc(path)+'</span></span>'+
+        '<span class="fb-count">'+hits+' hit'+(hits===1?'':'s')+'</span>';
+      return url ? '<a class="fb-file" href="'+esc(url)+'" target="_blank" rel="noopener" title="'+esc(path)+'">'+inner+'</a>'
+                  : '<div class="fb-file">'+inner+'</div>';
+    }).join("");
+  }
+  function fbLoad(details){
+    var rid = details.getAttribute("data-rule");
+    var status = details.querySelector(".fb-status");
+    var list = details.querySelector(".fb-list");
+    var search = details.querySelector(".fb-search");
+    function ready(entries){
+      status.hidden = true;
+      list.hidden = false;
+      search.disabled = false;
+      fbRenderList(list, entries, "");
+      search.oninput = function(){ fbRenderList(list, entries, search.value); };
+    }
+    if(fileListCache[rid]){ ready(fileListCache[rid]); return; }
+    fetch("files/"+encodeURIComponent(rid)+".json").then(function(r){
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      return r.json();
+    }).then(function(data){
+      fileListCache[rid] = data;
+      ready(data);
+    }).catch(function(err){
+      status.textContent = "Couldn’t load the file list (" + err.message + ").";
+    });
+  }
 
   // header stats
   el("stat").innerHTML = "<b>"+(meta.rules||rules.length)+"</b> rules · <b>"+(meta.matched_methods||"—")+"</b> matched methods<br>"+
@@ -163,9 +587,10 @@
   rules.forEach(function(r){ concepts[concept(r)] = (concepts[concept(r)]||0)+1; });
   var active = null;
   var chips = el("chips");
-  chips.innerHTML = '<span class="chip" data-c="" aria-pressed="true">All ('+rules.length+')</span>' +
+  chips.innerHTML = '<span class="chip" data-c="" aria-pressed="true" title="Show every rule, regardless of concept.">All ('+rules.length+')</span>' +
     Object.keys(concepts).sort().map(function(c){
-      return '<span class="chip" data-c="'+esc(c)+'" aria-pressed="false">'+esc(c)+' ('+concepts[c]+')</span>';
+      var gloss = CONCEPT_GLOSS[c];
+      return '<span class="chip" data-c="'+esc(c)+'" aria-pressed="false"'+(gloss?' title="'+esc(gloss)+'"':'')+'>'+esc(c)+' ('+concepts[c]+')</span>';
     }).join("");
   chips.addEventListener("click", function(e){
     var chip = e.target.closest(".chip"); if(!chip) return;
@@ -174,24 +599,48 @@
     render();
   });
   el("search").addEventListener("input", render);
+  el("list").addEventListener("click", function(e){
+    var t = e.target.closest("[data-jump]");
+    if(!t) return;
+    e.preventDefault();
+    var target = document.getElementById(t.getAttribute("data-jump"));
+    if(!target) return;
+    var host = target.closest("details.rule");
+    if(host && !host.open) host.open = true;
+    target.scrollIntoView({behavior:"smooth", block:"center"});
+    target.classList.add("flash-once");
+    setTimeout(function(){ target.classList.remove("flash-once"); }, 2600);
+  });
 
+  var FIELD_GLOSS = {
+    trigger: "The situation that makes this rule start looking — what a match has to contain or be part of.",
+    conditions: "What else has to hold at that point for the match to actually count.",
+    logic: "The concrete check the recognizer runs — this is what “matching” means for this rule.",
+    effect: "What a match is treated as evidence of, once found.",
+    observer: "Who could notice if this changed — the audience this rule’s matches are meaningful to.",
+    significance: "Why a change matching this rule might matter, if it does."
+  };
   function card(r){
     var d=r.definition||{}, p=r.profile||{}, desc=d.description||{}, c=concept(r), cnt=r.counts||{};
     var stt=status(r);
-    var line = desc.trigger || desc.logic || (d.id||"");
-    // English rows
-    var order=["observer","trigger","conditions","logic","effect","significance"];
-    var eng = order.filter(function(k){return desc[k];}).map(function(k){
-      return '<div class="eng-row"><div class="eng-k">'+k+'</div><div class="eng-v">'+hi(desc[k])+'</div></div>';
-    }).join("");
-    // params
+    var line = desc.effect || desc.trigger || desc.logic || (d.id||"");
     var params = d.parameters||{};
+    var ruleId = d.id||r.id;
+    // English rows -- Effect leads, since it's the closest thing to "what this rule means";
+    // the rest is more granular mechanics, tucked behind a toggle to keep the card compact.
+    function engRow(k){
+      return '<div class="eng-row"><div class="eng-k" title="'+esc(FIELD_GLOSS[k]||"")+'">'+k+'</div><div class="eng-v">'+hi(desc[k], params, ruleId)+'</div></div>';
+    }
+    var effectHtml = desc.effect ? engRow("effect") : "";
+    var restOrder=["observer","trigger","conditions","logic","significance"];
+    var restHtml = restOrder.filter(function(k){return desc[k];}).map(engRow).join("");
+    // params
     var prows = Object.keys(params).map(function(name){
       var pp=params[name]||{};
-      return '<tr><td>'+esc(name)+'</td><td>'+esc(pp.type||"")+'</td><td>'+esc(pp.meaning||"")+'</td></tr>';
+      return '<tr id="param-'+esc(ruleId)+'-'+esc(name)+'"><td>'+esc(name)+'</td><td>'+esc(pp.type||"")+'</td><td>'+esc(pp.meaning||"")+'</td></tr>';
     }).join("");
-    // prolog
-    var prolog = (d.idiom && d.idiom.match) || "";
+    // prolog matcher: raw clause up front, structured/traceable reading tucked behind a toggle
+    var matcherHtml = buildMatcher(d, ruleId, c, p, cnt.files);
     // honesty / limits
     var be=p.behavioral_evidence||{}, cov=p.coverage||{}, pred=p.prediction||{};
     var limitsBits=[];
@@ -200,22 +649,25 @@
     if(cov.not_claimed) limitsBits.push('<div><b>Not claimed:</b> '+esc(cov.not_claimed)+'</div>');
     if(pred.labels) limitsBits.push('<div><b>Labels:</b> '+esc(pred.labels)+'</div>');
     var rec=p.recognition||{};
-    var prov = 'recognition: '+esc(rec.backend||"—")+(rec.source_sha256?' · oracle '+esc(String(rec.source_sha256).slice(0,10)):'')+
-      ' · def v'+esc(d.version||"?");
+    var provBits = ['<span title="How this rule is currently evaluated.">recognition: '+esc(rec.backend||"—")+'</span>'];
+    if(rec.source_sha256) provBits.push('<span title="Fingerprint of the exact matcher source behind this rule’s counts — changes if the recognizer itself changes.">oracle '+esc(String(rec.source_sha256).slice(0,10))+'</span>');
+    provBits.push('<span title="This rule definition’s own version number.">def v'+esc(d.version||"?")+'</span>');
+    var prov = provBits.join(' · ');
 
-    return '<details class="rule" id="rule-'+esc(d.id||r.id)+'" data-rid="'+esc(d.id||r.id)+'" data-hay="'+esc((d.id+" "+c+" "+line+" "+Object.keys(params).join(" ")).toLowerCase())+'">'+
+    return '<details class="rule" id="rule-'+esc(ruleId)+'" data-rid="'+esc(ruleId)+'" data-hay="'+esc((d.id+" "+c+" "+line+" "+Object.keys(params).join(" ")).toLowerCase())+'">'+
       '<summary>'+
-        '<span class="cbadge '+cclass(c)+'">'+esc(c)+'</span>'+
-        '<span class="r-main"><span class="r-id">'+esc(d.id||r.id)+'</span><div class="r-line">'+hi(line)+'</div></span>'+
+        '<span class="r-main"><span class="r-id">'+conceptDotHtml(c)+esc(ruleId)+'</span><div class="r-line">'+hi(line)+'</div></span>'+
         '<span class="r-meta">'+
           '<span class="r-counts">'+(cnt.methods!=null?cnt.methods+' methods':'')+(cnt.files!=null?'<br>'+cnt.files+' files':'')+'</span>'+
-          (stt?'<span class="r-status st-'+stt+'">'+stt+'</span>':'')+
+          (stt?'<span class="r-status st-'+stt+'" title="'+esc(p.status||"")+'">'+stt+'</span>':'')+
         '</span>'+
       '</summary>'+
       '<div class="body">'+
-        '<div><div class="sec-title">What it recognizes</div><div class="english">'+eng+'</div></div>'+
+        '<div><div class="sec-title">How it’s recognized</div><div class="english">'+effectHtml+
+          (restHtml?'<details class="interactive-toggle"><summary>Show trigger, conditions, logic &amp; more</summary><div class="interactive-body">'+restHtml+'</div></details>':'')+
+        '</div></div>'+
+        (matcherHtml?'<div><div class="sec-title">Prolog matcher ('+esc((d.idiom&&d.idiom.predicate)||"match/5")+')</div>'+matcherHtml+'</div>':'')+
         (prows?'<div><div class="sec-title">Parameters</div><table class="params"><tbody>'+prows+'</tbody></table></div>':'')+
-        (prolog?'<div><div class="sec-title">Prolog matcher (match/5)</div><pre class="prolog">'+esc(prolog)+'</pre></div>':'')+
         (limitsBits.length?'<div><div class="sec-title">What it does not establish</div><div class="limits">'+limitsBits.join("")+'</div></div>':'')+
         '<div class="prov">'+prov+'</div>'+
       '</div>'+
@@ -239,6 +691,9 @@
       d.addEventListener("toggle", function(){
         if(d.open){ try{ history.replaceState(null,"","?rule="+encodeURIComponent(d.getAttribute("data-rid"))); }catch(e){} }
       });
+    });
+    [].forEach.call(el("list").querySelectorAll("details.file-browser"), function(d){
+      d.addEventListener("toggle", function(){ if(d.open) fbLoad(d); });
     });
   }
 
