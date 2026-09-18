@@ -78,7 +78,7 @@ public class TellerWritePlatformServiceJpaImpl implements TellerWritePlatformSer
     @Transactional
     public CommandProcessingResult createTeller(JsonCommand command) {
         try {
-            this.context.authenticatedUser();
+            this.context.validateHasReadPermission("TELLER");
 
             final Long officeId = command.longValueOfParameterNamed("officeId");
 
