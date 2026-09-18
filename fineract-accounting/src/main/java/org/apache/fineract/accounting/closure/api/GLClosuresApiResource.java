@@ -95,7 +95,7 @@ public class GLClosuresApiResource {
     }
 
     @GET
-    @Path("{glClosureId}")
+    @Path("by-id/{glClosureId}")
     @Produces({ MediaType.APPLICATION_JSON })
     @Operation(summary = "Retrieve an Accounting Closure", operationId = "retrieveOneGLClosure", description = """
             Example Requests:
