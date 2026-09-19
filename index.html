@@ -17,7 +17,7 @@
       verdict: null|PASS|VIOLATION|REVIEW|UNKNOWN, magnitude, reason,
       analysis: { files_analyzed:[...], n_behaviors, changes:[{concept,file,line,kind,reason}] },
       check_run_url, cis: null|{review_url,coverage_url,baseline_url},
-      proposal_id, reconciliation: {status,provider,model,classification,candidate,
+      reconciliation_proposal_id, reconciliation: {status,provider,model,classification,candidate,
         validation,grounded_validation,promotion_approval} }
 -->
 <title>CodeIntent — Semantic Governance Gate</title>
@@ -557,7 +557,7 @@
 
   function renderRecon(s) {
     var pane = el("recon-pane"), r = s.reconciliation;
-    if (!s.proposal_id && !r) { pane.hidden = true; return; }
+    if (!s.reconciliation_proposal_id && !r) { pane.hidden = true; return; }
     pane.hidden = false;
     var status = (r && (r.case_status || r.status)) || "awaiting_intent";
     var intent = r && r.intent_approval;
@@ -694,7 +694,7 @@
       .then(function (s) {
         render(s);
         var r = s.reconciliation;
-        var reconActive = !!s.proposal_id && (!r || !RECON_TERMINAL[r.case_status || r.status]);
+        var reconActive = !!s.reconciliation_proposal_id && (!r || !RECON_TERMINAL[r.case_status || r.status]);
         if (s.state !== "completed" || reconActive) setTimeout(poll, POLL_MS);
       })
       .catch(function () { render({ state: "absent", sha: SHA }); setTimeout(poll, POLL_MS * 2); });
