@@ -26,7 +26,9 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 1
+          # Fineract derives its version from reachable Git tags and fails in a
+          # shallow checkout with "couldn't find matching tag".
+          fetch-depth: 0
 
       - name: Set up and compile Fineract
         uses: ./.github/actions/setup-and-build-fineract
