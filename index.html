@@ -16,7 +16,9 @@
       stages: [ {id,label,state: pending|active|done|skip, detail} ],
       verdict: null|PASS|VIOLATION|REVIEW|UNKNOWN, magnitude, reason,
       analysis: { files_analyzed:[...], n_behaviors, changes:[{concept,file,line,kind,reason}] },
-      check_run_url, cis: null|{review_url,coverage_url,baseline_url} }
+      check_run_url, cis: null|{review_url,coverage_url,baseline_url},
+      proposal_id, reconciliation: {status,provider,model,classification,candidate,
+        validation,grounded_validation,promotion_approval} }
 -->
 <title>CodeIntent — Semantic Governance Gate</title>
 <main id="app" data-state="loading">
@@ -68,6 +70,19 @@
     <div class="verdict-actions" id="verdict-actions"></div>
   </section>
 
+  <section class="recon" id="recon-pane" hidden>
+    <div class="recon-head">
+      <div>
+        <span class="recon-eyebrow">AI-assisted rule reconciliation</span>
+        <h2 id="recon-title">Awaiting human intent decision</h2>
+      </div>
+      <span class="recon-badge" id="recon-badge">waiting</span>
+    </div>
+    <p class="recon-note" id="recon-note"></p>
+    <div class="rail recon-rail" id="recon-rail" aria-label="Rule reconciliation progress"></div>
+    <div class="ai-card" id="ai-card"></div>
+  </section>
+
   <section class="cis" id="cis-pane" hidden>
     <div class="cis-head">
       <span class="cis-eyebrow">Governance record · CodeIntent Studio</span>
@@ -89,48 +104,47 @@
 <style>
   :root {
     color-scheme: light dark;
-    --bg: #070b08;
-    --bg-2: #0d130e;
-    --panel: #101710;
-    --panel-2: #141d15;
-    --line: #23331f;
-    --line-soft: #1a251b;
-    --ink: #e9f6ea;
-    --ink-2: #a7c9ab;
-    --ink-3: #6f8f74;
-    --accent: #6be58a;         /* light green — "analyzing" signal */
-    --accent-ink: #071009;
+    --bg: #0e1118;
+    --bg-2: #151a24;
+    --panel: #171d29;
+    --panel-2: #1c2330;
+    --line: #263041;
+    --line-soft: #1e2634;
+    --ink: #e8edf6;
+    --ink-2: #9aa8bd;
+    --ink-3: #64728a;
+    --accent: #35d0e0;         /* electric cyan — "analyzing" signal */
+    --accent-ink: #0b1116;
     --ok: #3fd07a;
     --warn: #f3b03a;
     --bad: #ff5d6c;
-    --unknown: #7c9482;
-    --info: #6a8cff;
-    --shadow: 0 18px 50px -24px rgba(0,0,0,.85);
+    --unknown: #7f8ca3;
+    --shadow: 0 18px 50px -24px rgba(0,0,0,.75);
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     --radius: 14px;
   }
   @media (prefers-color-scheme: light) {
     :root {
-      --bg: #f2f9f2; --bg-2: #e8f4e9; --panel: #ffffff; --panel-2: #f2faf3;
-      --line: #cfe6d1; --line-soft: #e1f0e2;
-      --ink: #0b120b; --ink-2: #3d5240; --ink-3: #6c8270;
-      --accent: #1f9d4a; --accent-ink: #ffffff;
-      --ok: #1c9d54; --warn: #b9791a; --bad: #d83a4c; --info: #3a5bd8; --unknown: #5f7a64;
-      --shadow: 0 20px 50px -30px rgba(10,30,15,.35);
+      --bg: #f4f6fb; --bg-2: #eef1f8; --panel: #ffffff; --panel-2: #f7f9fd;
+      --line: #dbe2ee; --line-soft: #e7ecf5;
+      --ink: #131822; --ink-2: #47536a; --ink-3: #7d8aa1;
+      --accent: #0c9fb2; --accent-ink: #ffffff;
+      --ok: #1c9d54; --warn: #b9791a; --bad: #d83a4c; --unknown: #6b7890;
+      --shadow: 0 20px 50px -30px rgba(20,30,60,.35);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --bg:#070b08; --bg-2:#0d130e; --panel:#101710; --panel-2:#141d15; --line:#23331f; --line-soft:#1a251b;
-    --ink:#e9f6ea; --ink-2:#a7c9ab; --ink-3:#6f8f74; --accent:#6be58a; --accent-ink:#071009;
-    --ok:#3fd07a; --warn:#f3b03a; --bad:#ff5d6c; --info:#6a8cff; --unknown:#7c9482; --shadow:0 18px 50px -24px rgba(0,0,0,.85);
+    --bg:#0e1118; --bg-2:#151a24; --panel:#171d29; --panel-2:#1c2330; --line:#263041; --line-soft:#1e2634;
+    --ink:#e8edf6; --ink-2:#9aa8bd; --ink-3:#64728a; --accent:#35d0e0; --accent-ink:#0b1116;
+    --ok:#3fd07a; --warn:#f3b03a; --bad:#ff5d6c; --unknown:#7f8ca3; --shadow:0 18px 50px -24px rgba(0,0,0,.75);
   }
   :root[data-theme="light"] {
     color-scheme: light;
-    --bg:#f2f9f2; --bg-2:#e8f4e9; --panel:#fff; --panel-2:#f2faf3; --line:#cfe6d1; --line-soft:#e1f0e2;
-    --ink:#0b120b; --ink-2:#3d5240; --ink-3:#6c8270; --accent:#1f9d4a; --accent-ink:#fff;
-    --ok:#1c9d54; --warn:#b9791a; --bad:#d83a4c; --info:#3a5bd8; --unknown:#5f7a64; --shadow:0 20px 50px -30px rgba(10,30,15,.35);
+    --bg:#f4f6fb; --bg-2:#eef1f8; --panel:#fff; --panel-2:#f7f9fd; --line:#dbe2ee; --line-soft:#e7ecf5;
+    --ink:#131822; --ink-2:#47536a; --ink-3:#7d8aa1; --accent:#0c9fb2; --accent-ink:#fff;
+    --ok:#1c9d54; --warn:#b9791a; --bad:#d83a4c; --unknown:#6b7890; --shadow:0 20px 50px -30px rgba(20,30,60,.35);
   }
 
   * { box-sizing: border-box; }
@@ -148,7 +162,7 @@
   .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
   .brand { display: flex; align-items: center; gap: 12px; }
   .mark { width: 34px; height: 34px; border-radius: 9px; flex: none;
-    background: linear-gradient(150deg, var(--accent), color-mix(in srgb, var(--accent) 35%, #05130a));
+    background: linear-gradient(150deg, var(--accent), color-mix(in srgb, var(--accent) 40%, #6a7cff));
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent) inset, 0 8px 20px -8px color-mix(in srgb, var(--accent) 60%, transparent);
     position: relative; }
   .mark::after { content:""; position:absolute; inset:9px; border-radius:3px;
@@ -194,25 +208,12 @@
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); animation: ring 1.5s ease-out infinite; }
   .step.skip .node { border-style: dashed; }
   .step-body { min-width: 0; padding-top: 3px; }
-  .step-row { display: flex; align-items: baseline; gap: 8px; }
   .step-label { font-weight: 600; font-size: 14.5px; }
   .step.active .step-label { color: var(--ink); }
   .step:not(.active):not(.done) .step-label { color: var(--ink-2); }
   .step-detail { color: var(--ink-2); font-size: 13px; font-family: var(--mono); margin-top: 3px;
     min-height: 1.1em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .step.active .step-detail { color: var(--accent); }
-  .step-toggle { appearance: none; border: none; background: none; padding: 1px 6px; margin: 0;
-    font-size: 11px; font-weight: 600; letter-spacing: .2px; color: var(--ink-3); cursor: pointer;
-    border-radius: 999px; font-family: var(--sans); }
-  .step-toggle:hover { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
-  .step-log { margin: 8px 0 2px; border-radius: 10px; border: 1px solid var(--line-soft);
-    background: var(--bg); max-height: 180px; overflow-y: auto; }
-  .step-log-row { display: grid; grid-template-columns: 56px 1fr; gap: 10px; padding: 3px 10px;
-    font-family: var(--mono); font-size: 12px; }
-  .step-log-row:not(:last-child) { border-bottom: 1px solid var(--line-soft); }
-  .step-log-t { color: var(--ink-3); text-align: right; user-select: none; }
-  .step-log-msg { color: var(--ink-2); white-space: pre-wrap; word-break: break-word; }
-  .step.active .step-log-row:last-child .step-log-msg { color: var(--accent); }
   .caret { display: inline-block; width: 7px; background: currentColor; margin-left: 1px;
     animation: blink 1s steps(2) infinite; }
 
@@ -279,6 +280,36 @@
   .btn:active { transform: translateY(1px); }
   .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
 
+  /* Human → AI → validator reconciliation workflow */
+  .recon { margin-top: 16px; padding: 20px; border-radius: var(--radius); background: var(--panel);
+    border: 1px solid var(--line); border-top: 3px solid var(--accent); box-shadow: var(--shadow); }
+  .recon-head { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; }
+  .recon-eyebrow { color:var(--accent); font-size:11px; font-weight:800; letter-spacing:.9px; text-transform:uppercase; }
+  .recon h2 { margin:4px 0 0; font-size:18px; line-height:1.25; }
+  .recon-badge { flex:none; font-family:var(--mono); font-size:11px; font-weight:800; text-transform:uppercase;
+    letter-spacing:.5px; padding:5px 9px; border-radius:7px; color:var(--accent);
+    background:color-mix(in srgb, var(--accent) 12%, transparent); border:1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); }
+  .recon-note { color:var(--ink-2); font-size:13.5px; margin:10px 0 2px; }
+  .recon-rail { margin-top:10px; }
+  .ai-card { margin-top:14px; padding:16px; border-radius:11px; background:var(--panel-2); border:1px solid var(--line-soft); }
+  .ai-card:empty { display:none; }
+  .ai-title { display:flex; align-items:center; justify-content:space-between; gap:10px; font-weight:750; }
+  .ai-meta { margin-top:5px; color:var(--ink-3); font:12px var(--mono); word-break:break-word; }
+  .ai-rationale { margin:12px 0; color:var(--ink-2); font-size:13.5px; }
+  .ai-label { margin-top:13px; color:var(--ink-3); font-size:10.5px; text-transform:uppercase; letter-spacing:.8px; font-weight:800; }
+  .proposal-delta { margin-top:7px; padding:11px; border-radius:9px; background:var(--panel); border:1px solid var(--line-soft); }
+  .delta-id { color:var(--ink); font:12px var(--mono); word-break:break-all; }
+  .delta-values { display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:8px; }
+  .delta-values > div { min-width:0; }
+  .delta-values span { color:var(--ink-3); font-size:10px; text-transform:uppercase; letter-spacing:.6px; }
+  .delta-values pre { margin:3px 0 0; padding:7px; overflow:auto; color:var(--ink-2); font:11px/1.4 var(--mono);
+    background:var(--bg); border-radius:6px; }
+  .validation-line { margin-top:10px; color:var(--ink-2); font-size:13px; }
+  .validation-line strong { color:var(--ink); }
+  .finding-list { margin:7px 0 0; padding-left:18px; color:var(--ink-2); font-size:12.5px; }
+  .pending-ai { color:var(--ink-2); font-size:13.5px; }
+  @media (max-width:600px) { .delta-values { grid-template-columns:1fr; } }
+
   /* Governance (CIS) pane — the persisted source of truth */
   .cis { margin-top: 16px; padding: 18px 20px; border-radius: var(--radius);
     background: var(--panel); border: 1px solid var(--line);
@@ -336,40 +367,6 @@
 
   var app = document.getElementById("app");
   var el = function (id) { return document.getElementById(id); };
-
-  // ---- per-step history ----------------------------------------------------
-  // The backend streams a new one-line `detail` per stage as it progresses
-  // (e.g. "reading Foo.java (1/6)" → "building HPG…" → …), but
-  // each poll only carries the *current* line — nothing upstream of this page
-  // remembers the ones before it. Keep our own transcript per stage so a step
-  // can be expanded into its full history instead of just the latest line.
-  var stageLogs = {};       // id -> [{t, text}]
-  var stageOpen = {};       // id -> bool, only set once the viewer has clicked it
-  var STAGE_LOG_CAP = 80;   // long runs shouldn't grow this unboundedly
-  var lastStages = null;    // so a toggle click can re-render just the rail
-
-  el("rail").addEventListener("click", function (e) {
-    var btn = e.target.closest && e.target.closest("[data-stage-toggle]");
-    if (!btn) return;
-    var id = btn.getAttribute("data-stage-toggle");
-    stageOpen[id] = btn.getAttribute("aria-expanded") !== "true";
-    renderRail(lastStages);
-  });
-
-  function noteStageDetail(id, detail) {
-    if (!detail) return;
-    var log = stageLogs[id] || (stageLogs[id] = []);
-    var last = log[log.length - 1];
-    if (last && last.text === detail) return; // dedupe unchanged polls
-    log.push({ t: Date.now(), text: detail });
-    if (log.length > STAGE_LOG_CAP) log.shift();
-  }
-
-  function fmtElapsed(ms, t0) {
-    var s = Math.max(0, (ms - t0) / 1000);
-    return "+" + (s < 10 ? s.toFixed(1) : Math.round(s)) + "s";
-  }
-
   var VERDICT_TITLE = {
     VIOLATION: "Governed behavior removed",
     PASS: "All governed behavior preserved",
@@ -439,35 +436,17 @@
   }
 
   function renderRail(stages) {
-    lastStages = stages;
     var rail = el("rail");
     rail.innerHTML = (stages || []).map(function (st) {
       var cls = st.state || "pending";
       var icon = cls === "done" ? "✓" : cls === "skip" ? "–" : "";
-      noteStageDetail(st.id, st.detail);
-      var log = stageLogs[st.id] || [];
       var detail = st.detail ? esc(st.detail) : (cls === "active" ? "working" : "");
       var caret = cls === "active" ? '<span class="caret">&nbsp;</span>' : "";
-      var hasHistory = log.length > 1;
-      var open = stageOpen.hasOwnProperty(st.id) ? stageOpen[st.id] : cls === "active";
-      var toggle = hasHistory
-        ? '<button type="button" class="step-toggle" data-stage-toggle="' + esc(st.id) +
-          '" aria-expanded="' + open + '">' + (open ? "hide" : log.length + " updates") + "</button>"
-        : "";
-      var t0 = log.length ? log[0].t : Date.now();
-      var logHtml = (hasHistory && open)
-        ? '<div class="step-log">' + log.map(function (row) {
-            return '<div class="step-log-row"><span class="step-log-t">' + fmtElapsed(row.t, t0) +
-              '</span><span class="step-log-msg">' + esc(row.text) + "</span></div>";
-          }).join("") + "</div>"
-        : "";
       return '<div class="step ' + cls + '">' +
         '<div class="node">' + icon + '</div>' +
-        '<div class="step-body"><div class="step-row"><div class="step-label">' + esc(st.label) + '</div>' + toggle + '</div>' +
-        '<div class="step-detail">' + detail + caret + '</div>' + logHtml + '</div></div>';
+        '<div class="step-body"><div class="step-label">' + esc(st.label) + '</div>' +
+        '<div class="step-detail">' + detail + caret + '</div></div></div>';
     }).join("");
-    var logBoxes = rail.querySelectorAll(".step-log");
-    for (var i = 0; i < logBoxes.length; i++) { logBoxes[i].scrollTop = logBoxes[i].scrollHeight; }
   }
 
   function renderVerdict(s) {
@@ -566,6 +545,99 @@
       .catch(function () { paintCisPending(base, ptr); });
   }
 
+  // ---- AI-assisted reconciliation -----------------------------------------
+  var RECON_TERMINAL = {
+    rejected_code:1, candidate_blocked:1, grounded_blocked:1,
+    no_supported_rule:1, candidate_rejected:1, promotion_approved:1, promoted:1
+  };
+
+  function reconStep(label, state, detail) {
+    return { label:label, state:state || "pending", detail:detail || "" };
+  }
+
+  function renderRecon(s) {
+    var pane = el("recon-pane"), r = s.reconciliation;
+    if (!s.proposal_id && !r) { pane.hidden = true; return; }
+    pane.hidden = false;
+    var status = (r && (r.case_status || r.status)) || "awaiting_intent";
+    var intent = r && r.intent_approval;
+    var cls = r && r.classification;
+    var candidate = r && r.candidate;
+    var validation = r && r.validation;
+    var grounded = r && r.grounded_validation;
+    var approval = r && r.promotion_approval;
+    var aiBusy = r && ["proposal_queued", "proposal_running", "classified"].indexOf(r.status) >= 0;
+    var blocked = ["candidate_blocked", "grounded_blocked", "no_supported_rule", "candidate_rejected"].indexOf(status) >= 0;
+
+    var steps = [
+      reconStep("Approve application intent", intent ? "done" : "active",
+        intent ? "approved by @" + intent.actor : "human decision required in the GitHub check"),
+      reconStep("Choose reconciliation type", cls ? "done" : (intent ? "active" : "pending"),
+        cls ? cls.kind + (cls.rule_id ? " · " + cls.rule_id : "") : "rebind, revise, or add"),
+      reconStep("AI proposes rule change", candidate ? "done" : (aiBusy ? "active" : "pending"),
+        candidate ? (candidate.author || "AI") + " · " + candidate.outcome : (aiBusy ? "Claude is generating a typed proposal" : "not started")),
+      reconStep("Validate proposal", grounded ? (grounded.status === "passed" ? "done" : "skip")
+        : (validation ? (validation.status === "passed" ? "active" : "skip") : "pending"),
+        grounded ? "grounded validation " + grounded.status : validation ? "structural validation " + validation.status : "not started"),
+      reconStep("Approve exact candidate", approval ? "done" : (status === "candidate_validated" ? "active" : blocked ? "skip" : "pending"),
+        approval ? "approved by @" + approval.actor : status === "candidate_validated" ? "human catalog approval required" : "not available")
+    ];
+    renderRailInto("recon-rail", steps);
+
+    el("recon-badge").textContent = status.replace(/_/g, " ");
+    var titles = {
+      awaiting_intent:"Waiting for application intent approval",
+      intent_approved:"Choose how the rule should reconcile",
+      classified:"AI proposal is queued",
+      grounding_required:"Structural validation passed; grounding remains",
+      candidate_validated:"AI proposal validated; human approval required",
+      candidate_blocked:"AI proposal was blocked",
+      grounded_blocked:"Grounded validation blocked the proposal",
+      no_supported_rule:"AI found no supportable reusable rule",
+      candidate_rejected:"AI proposal rejected",
+      promotion_approved:"Exact AI candidate approved"
+    };
+    el("recon-title").textContent = titles[status] || (aiBusy ? "Claude is proposing a rule update" : "Rule reconciliation in progress");
+    el("recon-note").textContent = "The model may suggest a change, but it cannot approve application intent or promote its own candidate.";
+
+    var card = el("ai-card");
+    if (!candidate) {
+      card.innerHTML = '<div class="pending-ai"><strong>No AI suggestion yet.</strong> ' +
+        (aiBusy ? "The Claude worker is generating one now."
+          : "Generation starts only after a human approves the behavior and selects Rebind, Revise, or Add.") + '</div>';
+      return;
+    }
+    var model = (r.provider || "AI") + (r.model ? " · " + r.model : "");
+    var changes = candidate.expected_instance_changes || [];
+    var changeHtml = changes.length ? changes.map(function (c) {
+      return '<div class="proposal-delta"><div class="delta-id">' + esc(c.identity) + '</div>' +
+        '<div class="delta-values"><div><span>before</span><pre>' + esc(c.before_parameters_json || "—") + '</pre></div>' +
+        '<div><span>after</span><pre>' + esc(c.after_parameters_json || "—") + '</pre></div></div></div>';
+    }).join("") : '<div class="validation-line">No instance-level delta was proposed.</div>';
+    var findings = [].concat((validation && validation.findings) || [], (grounded && grounded.findings) || []);
+    var findingHtml = findings.length ? '<ul class="finding-list">' + findings.map(function (f) {
+      return '<li><code>' + esc(f.code || "finding") + '</code> — ' + esc(f.message || "") + '</li>';
+    }).join("") + '</ul>' : "";
+    card.innerHTML = '<div class="ai-title"><span>Claude suggestion: ' + esc(candidate.outcome) + '</span>' +
+      '<span class="recon-badge">AI generated</span></div>' +
+      '<div class="ai-meta">' + esc(model) + ' · candidate ' + esc((candidate.sha256 || "").slice(0, 12)) + '</div>' +
+      '<div class="ai-rationale">' + esc(candidate.rationale || "No rationale supplied.") + '</div>' +
+      '<div class="ai-label">Proposed bound-value changes</div>' + changeHtml +
+      '<div class="validation-line"><strong>Structural validator:</strong> ' + esc((validation && validation.status) || "pending") +
+      ' &nbsp;·&nbsp; <strong>Grounded validator:</strong> ' + esc((grounded && grounded.status) || "pending") + '</div>' + findingHtml;
+  }
+
+  function renderRailInto(id, stages) {
+    var rail = el(id);
+    rail.innerHTML = (stages || []).map(function (st) {
+      var cls = st.state || "pending";
+      var icon = cls === "done" ? "✓" : cls === "skip" ? "–" : "";
+      return '<div class="step ' + cls + '"><div class="node">' + icon + '</div>' +
+        '<div class="step-body"><div class="step-label">' + esc(st.label) + '</div>' +
+        '<div class="step-detail">' + esc(st.detail || "") + (cls === "active" ? '<span class="caret">&nbsp;</span>' : '') + '</div></div></div>';
+    }).join("");
+  }
+
   function paintCis(d, base, ptr) {
     var pane = el("cis-pane"); pane.hidden = false;
     app.setAttribute("data-cis", d.outcome || "");
@@ -608,6 +680,7 @@
       el("subline").textContent = s.reason || "";
     }
     renderVerdict(s);
+    renderRecon(s);
     renderCis(s);
     if (s.updated_at) el("foot-updated").textContent = "updated " + fmt(s.updated_at);
   }
@@ -618,7 +691,12 @@
     var url = API + "/status?sha=" + encodeURIComponent(SHA);
     fetch(url, { headers: { "Accept": "application/json" } })
       .then(function (r) { return r.ok ? r.json() : { state: "absent" }; })
-      .then(function (s) { render(s); if (s.state !== "completed") setTimeout(poll, POLL_MS); })
+      .then(function (s) {
+        render(s);
+        var r = s.reconciliation;
+        var reconActive = !!s.proposal_id && (!r || !RECON_TERMINAL[r.case_status || r.status]);
+        if (s.state !== "completed" || reconActive) setTimeout(poll, POLL_MS);
+      })
       .catch(function () { render({ state: "absent", sha: SHA }); setTimeout(poll, POLL_MS * 2); });
   }
 
@@ -692,7 +770,7 @@
       var bn = f.split("/").pop();
       var n = i + 1, tot = files.length;
       add(1200, function () { stg("analyze").detail = "reading " + bn + " (" + n + "/" + tot + ")"; });
-      add(2600, function () { stg("analyze").detail = "building HPG: " + bn; });
+      add(2600, function () { stg("analyze").detail = "javasrc2cpg → building CPG: " + bn; });
       add(2100, function () { stg("analyze").detail = "matching idiom catalog in " + bn + " …"; });
       add(1400, function () {
         beh += perFileBeh[i] || 6;
