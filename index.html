@@ -559,7 +559,7 @@
     var pane = el("recon-pane"), r = s.reconciliation;
     if (!s.reconciliation_proposal_id && !r) { pane.hidden = true; return; }
     pane.hidden = false;
-    var status = (r && (r.case_status || r.status)) || "awaiting_intent";
+    var status = (r && (r.status === "proposal_failed" ? r.status : (r.case_status || r.status))) || "awaiting_intent";
     var intent = r && r.intent_approval;
     var cls = r && r.classification;
     var candidate = r && r.candidate;
@@ -589,6 +589,7 @@
       awaiting_intent:"Waiting for application intent approval",
       intent_approved:"Choose how the rule should reconcile",
       classified:"AI proposal is queued",
+      proposal_failed:"AI proposal failed; an operator needs to retry it",
       grounding_required:"Structural validation passed; grounding remains",
       candidate_validated:"AI proposal validated; human approval required",
       candidate_blocked:"AI proposal was blocked",
@@ -603,7 +604,8 @@
     var card = el("ai-card");
     if (!candidate) {
       card.innerHTML = '<div class="pending-ai"><strong>No AI suggestion yet.</strong> ' +
-        (aiBusy ? "The Claude worker is generating one now."
+        (status === "proposal_failed" ? "The approved change is recorded, but candidate generation failed. No rule was changed."
+          : aiBusy ? "The Claude worker is generating one now."
           : "Generation starts only after a human approves the behavior and selects Rebind, Revise, or Add.") + '</div>';
       return;
     }
@@ -694,7 +696,7 @@
       .then(function (s) {
         render(s);
         var r = s.reconciliation;
-        var reconActive = !!s.reconciliation_proposal_id && (!r || !RECON_TERMINAL[r.case_status || r.status]);
+        var reconActive = !!s.reconciliation_proposal_id && (!r || !RECON_TERMINAL[r.status === "proposal_failed" ? r.status : (r.case_status || r.status)]);
         if (s.state !== "completed" || reconActive) setTimeout(poll, POLL_MS);
       })
       .catch(function () { render({ state: "absent", sha: SHA }); setTimeout(poll, POLL_MS * 2); });
