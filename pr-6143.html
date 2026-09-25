@@ -84,6 +84,40 @@
     .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; color: var(--muted); font-size: .76rem; }
     .legend span { display: inline-flex; align-items: center; gap: 6px; }
     .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    .ast-note { margin: -8px 0 18px; padding: 9px 12px; border-left: 3px solid var(--blue); background: var(--blue-soft); color: var(--muted); font-size: .79rem; }
+    .ast-layout { display: grid; grid-template-columns: minmax(245px, .72fr) minmax(0, 1.6fr); border: 1px solid var(--line); background: var(--line); gap: 1px; }
+    .ast-map, .ast-focus { background: var(--sheet); padding: 18px; }
+    .ast-kicker { margin: 0 0 12px; color: var(--muted); font-size: .68rem; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+    .ast-map details { border-top: 1px solid var(--line); }
+    .ast-map details:last-child { border-bottom: 1px solid var(--line); }
+    .ast-map summary { cursor: pointer; padding: 10px 2px; font: 700 .8rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .ast-map ul { list-style: none; margin: -2px 0 10px 15px; padding: 0 0 0 13px; border-left: 1px solid var(--line); color: var(--muted); font: .75rem/1.65 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .ast-op { display: inline-block; width: 16px; font-weight: 900; }
+    .ast-op.add { color: var(--green); }
+    .ast-op.mod { color: var(--amber); }
+    .ast-focus-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 14px; }
+    .ast-focus-head h3 { margin: 0; font-size: .93rem; }
+    .ast-focus-head span { color: var(--muted); font-size: .7rem; text-align: right; }
+    .ast-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .ast-pane { border: 1px solid var(--line); background: #faf9f5; min-width: 0; }
+    .ast-pane h4 { margin: 0; padding: 8px 11px; border-bottom: 1px solid var(--line); color: var(--muted); font-size: .67rem; letter-spacing: .08em; text-transform: uppercase; }
+    .ast-tree { padding: 10px 7px 12px; overflow-x: auto; }
+    .ast-row { display: flex; align-items: center; gap: 7px; min-width: max-content; padding: 4px 7px; border-left: 3px solid transparent; font: .74rem/1.25 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .ast-row.i1 { padding-left: 23px; }
+    .ast-row.i2 { padding-left: 39px; }
+    .ast-row.i3 { padding-left: 55px; }
+    .ast-row.i4 { padding-left: 71px; }
+    .ast-row.added { background: var(--green-soft); border-left-color: var(--green); }
+    .ast-row.updated { background: var(--amber-soft); border-left-color: var(--amber); }
+    .ast-row.empty { color: var(--muted); font-style: italic; }
+    .seed { margin-left: auto; border-radius: 99px; padding: 2px 6px; color: var(--purple); background: var(--purple-soft); font: 800 .58rem/1.2 Inter, sans-serif; letter-spacing: .05em; }
+    .ast-delta { margin-top: 12px; border: 1px solid var(--line); padding: 13px; }
+    .ast-delta h4 { margin: 0 0 9px; font-size: .79rem; }
+    .arg-swap { display: grid; grid-template-columns: 1fr 34px 1fr; align-items: center; gap: 7px; }
+    .arg { border-radius: 5px; padding: 10px; font: .76rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow-wrap: anywhere; }
+    .arg.before { color: var(--red); background: var(--red-soft); text-decoration: line-through; }
+    .arg.after { color: var(--green); background: var(--green-soft); }
+    .ast-meaning { margin: 10px 0 0; color: var(--muted); font-size: .76rem; }
     .before-after { display: grid; grid-template-columns: 1fr 40px 1.35fr; align-items: stretch; }
     .state-card { border: 1px solid var(--line); padding: 20px; background: #faf9f5; }
     .state-card h3 { margin: 0 0 12px; font-size: .82rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
@@ -119,6 +153,9 @@
       .finding-copy { padding: 8px 18px 17px; }
       .before-after { grid-template-columns: 1fr; gap: 10px; }
       .before-after > .arrow { transform: rotate(90deg); min-height: 28px; }
+      .ast-layout, .ast-pair { grid-template-columns: 1fr; }
+      .ast-focus-head { display: block; }
+      .ast-focus-head span { display: block; margin-top: 4px; text-align: left; }
       .claim { grid-template-columns: 1fr; gap: 5px; }
       .claim .proof { text-align: left; }
       .impact-scroll { overflow-x: auto; }
@@ -170,6 +207,7 @@
     <nav aria-label="Review sections">
       <a href="#findings">Findings</a>
       <a href="#flow">Semantic flow</a>
+      <a href="#syntax">Changed syntax</a>
       <a href="#state">State model</a>
       <a href="#impact">Workflow impact</a>
       <a href="#evidence">Evidence</a>
@@ -246,6 +284,91 @@
           <span><i class="swatch" style="background:var(--amber-soft);border:1px solid #d7bd83"></i>Decision seed</span>
           <span><i class="swatch" style="background:var(--purple-soft);border:1px solid #bba7cb"></i>Field-write seed</span>
           <span><i class="swatch" style="background:var(--green-soft);border:1px solid #a7ceb5"></i>Observable I/O seed</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="syntax">
+      <div class="section-head">
+        <h2>Changed syntax, with semantic seeds overlaid</h2>
+        <p>Start at a changed declaration, expand only the affected AST path, then connect syntax operations to the lifecycle they influence.</p>
+      </div>
+      <p class="ast-note"><strong>Prototype evidence view:</strong> this tree is reconstructed from PR source spans and the Java diff. It demonstrates the intended AST-delta presentation; it is not yet emitted automatically from paired base/head CPG queries.</p>
+      <div class="ast-layout">
+        <aside class="ast-map" aria-label="Changed declaration map">
+          <p class="ast-kicker">PR-level structure map</p>
+          <details open>
+            <summary><span class="ast-op add">+</span>WorkingCapitalLoan</summary>
+            <ul>
+              <li><span class="ast-op add">+</span>4 persistent fields</li>
+              <li><span class="ast-op add">+</span>markAsChargedOff(...)</li>
+              <li><span class="ast-op add">+</span>liftChargeOff()</li>
+              <li><span class="ast-op add">+</span>isChargeOffOnDate(...)</li>
+            </ul>
+          </details>
+          <details>
+            <summary><span class="ast-op add">+</span>ChargeOffWriteService</summary>
+            <ul>
+              <li><span class="ast-op add">+</span>chargeOff(...)</li>
+              <li><span class="ast-op add">+</span>undoChargeOff(...)</li>
+              <li><span class="ast-op add">+</span>createNote(...)</li>
+            </ul>
+          </details>
+          <details>
+            <summary><span class="ast-op add">+</span>DataValidator</summary>
+            <ul>
+              <li><span class="ast-op add">+</span>validateChargeOff(...)</li>
+              <li><span class="ast-op add">+</span>validateUndoChargeOff(...)</li>
+            </ul>
+          </details>
+          <details open>
+            <summary><span class="ast-op mod">~</span>Existing accounting paths</summary>
+            <ul>
+              <li><span class="ast-op mod">~</span>charge accrual</li>
+              <li><span class="ast-op mod">~</span>charge adjustment</li>
+              <li><span class="ast-op mod">~</span>discount amortization</li>
+            </ul>
+          </details>
+        </aside>
+
+        <div class="ast-focus">
+          <div class="ast-focus-head">
+            <h3>Focus: <code>WorkingCapitalLoan.markAsChargedOff</code></h3>
+            <span>unchanged siblings collapsed</span>
+          </div>
+          <div class="ast-pair">
+            <article class="ast-pane">
+              <h4>Base AST</h4>
+              <div class="ast-tree">
+                <div class="ast-row">ClassDeclaration</div>
+                <div class="ast-row i1">WorkingCapitalLoan</div>
+                <div class="ast-row i2 empty">No matching method subtree</div>
+              </div>
+            </article>
+            <article class="ast-pane">
+              <h4>Head AST</h4>
+              <div class="ast-tree">
+                <div class="ast-row">ClassDeclaration</div>
+                <div class="ast-row i1">WorkingCapitalLoan</div>
+                <div class="ast-row i2 added">MethodDeclaration · markAsChargedOff</div>
+                <div class="ast-row i3 added">Block</div>
+                <div class="ast-row i4 added">Assignment · chargedOff = true <span class="seed">FIELD</span></div>
+                <div class="ast-row i4 added">Assignment · chargedOffOnDate = … <span class="seed">FIELD</span></div>
+                <div class="ast-row i4 added">Assignment · chargedOffBy = … <span class="seed">FIELD</span></div>
+                <div class="ast-row i4 added">Assignment · chargeOffReason = … <span class="seed">FIELD</span></div>
+              </div>
+            </article>
+          </div>
+
+          <div class="ast-delta">
+            <h4>Small but consequential modification in existing accounting code</h4>
+            <div class="arg-swap">
+              <div class="arg before">BooleanLiteral(false)</div>
+              <div class="arrow">→</div>
+              <div class="arg after">loan.isChargedOff()</div>
+            </div>
+            <p class="ast-meaning"><span class="seed">DECISION</span> Argument 4 of <code>postJournalEntries(...)</code> changes from a constant to a read of persistent domain state. The same structural pattern appears in charge accrual, charge adjustment, and discount-fee amortization.</p>
+          </div>
         </div>
       </div>
     </section>
