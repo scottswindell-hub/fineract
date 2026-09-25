@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Semantic review · Apache Fineract PR #6143</title>
+  <style>
+    :root {
+      --ink: #17211d;
+      --muted: #64706a;
+      --paper: #f2efe8;
+      --sheet: #fffefa;
+      --line: #d9d5ca;
+      --blue: #285f88;
+      --blue-soft: #e9f2f8;
+      --purple: #6b4c85;
+      --purple-soft: #f1ebf6;
+      --green: #2f7251;
+      --green-soft: #e8f3ec;
+      --amber: #8a5a16;
+      --amber-soft: #fbf1d9;
+      --red: #9c3c35;
+      --red-soft: #f9e9e6;
+      --shadow: 0 18px 48px rgba(44, 39, 28, .10);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: var(--ink); background: var(--paper); line-height: 1.55; }
+    a { color: var(--blue); }
+    button, a { -webkit-tap-highlight-color: transparent; }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: .9em; }
+    .topbar { border-bottom: 1px solid var(--line); background: rgba(255, 254, 250, .9); backdrop-filter: blur(10px); }
+    .topbar-inner, main { width: min(1180px, calc(100% - 32px)); margin: auto; }
+    .topbar-inner { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+    .brand { display: flex; align-items: baseline; gap: 10px; font-weight: 750; letter-spacing: -.02em; }
+    .brand span { color: var(--muted); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+    .toplink { font-size: .84rem; text-decoration: none; }
+    main { margin-top: 28px; margin-bottom: 56px; background: var(--sheet); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    header { padding: 34px 38px 28px; border-bottom: 1px solid var(--line); }
+    .eyebrow { margin: 0 0 8px; color: var(--blue); text-transform: uppercase; letter-spacing: .12em; font-weight: 800; font-size: .72rem; }
+    h1 { max-width: 850px; margin: 0; font: 650 clamp(2rem, 5vw, 3.65rem)/1.04 Georgia, serif; letter-spacing: -.035em; }
+    .summary { max-width: 850px; margin: 18px 0 0; color: #35413b; font-size: clamp(1rem, 2vw, 1.18rem); }
+    .metadata { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 23px; }
+    .pill { border: 1px solid var(--line); border-radius: 99px; padding: 5px 10px; color: var(--muted); background: #faf9f5; font-size: .78rem; }
+    .pill.verdict { color: var(--green); background: var(--green-soft); border-color: #bcd9c7; font-weight: 800; }
+    nav { display: flex; overflow-x: auto; padding: 0 38px; border-bottom: 1px solid var(--line); background: #faf9f5; }
+    nav a { padding: 14px 18px 12px; color: var(--muted); text-decoration: none; white-space: nowrap; font-size: .84rem; font-weight: 700; border-bottom: 3px solid transparent; }
+    nav a:hover, nav a:focus { color: var(--blue); border-bottom-color: var(--blue); }
+    section { padding: 32px 38px; border-bottom: 1px solid var(--line); scroll-margin-top: 12px; }
+    section:last-child { border-bottom: 0; }
+    .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 420px); gap: 30px; align-items: end; margin-bottom: 22px; }
+    h2 { margin: 0; font: 650 1.65rem/1.2 Georgia, serif; letter-spacing: -.02em; }
+    .section-head p { margin: 0; color: var(--muted); font-size: .9rem; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; border: 1px solid var(--line); background: var(--line); margin-top: 28px; }
+    .metric { background: var(--sheet); padding: 16px; }
+    .metric strong { display: block; font: 650 1.65rem/1 Georgia, serif; }
+    .metric span { color: var(--muted); font-size: .75rem; text-transform: uppercase; letter-spacing: .06em; }
+    .findings { display: grid; gap: 10px; }
+    .finding { display: grid; grid-template-columns: 132px 1fr; border: 1px solid var(--line); border-left-width: 5px; }
+    .finding.block { border-left-color: var(--red); }
+    .finding.review { border-left-color: var(--amber); }
+    .severity { padding: 18px; font-size: .69rem; text-transform: uppercase; letter-spacing: .08em; font-weight: 850; color: var(--muted); }
+    .finding.block .severity { color: var(--red); }
+    .finding.review .severity { color: var(--amber); }
+    .severity code { display: block; margin-top: 6px; font-size: .68rem; }
+    .finding-copy { padding: 15px 18px 17px 0; }
+    .finding h3 { margin: 0 0 4px; font-size: 1rem; }
+    .finding p { margin: 0; color: var(--muted); font-size: .88rem; }
+    .flow-shell { padding: 22px; border: 1px solid var(--line); background: #faf9f5; overflow-x: auto; }
+    .flow { min-width: 920px; display: grid; grid-template-columns: 160px 42px 190px 42px 210px 42px 1fr; gap: 0; align-items: stretch; }
+    .flow-col { display: grid; align-content: center; gap: 10px; }
+    .node { position: relative; border: 1px solid; border-radius: 7px; background: var(--sheet); padding: 12px 13px; min-height: 68px; }
+    .node b { display: block; font-size: .83rem; }
+    .node small { display: block; margin-top: 3px; color: var(--muted); font-size: .72rem; line-height: 1.35; }
+    .node.command { border-color: #a9bed0; background: var(--blue-soft); }
+    .node.decision { border-color: #d7bd83; background: var(--amber-soft); }
+    .node.state { border-color: #bba7cb; background: var(--purple-soft); }
+    .node.write { border-color: #a7ceb5; background: var(--green-soft); }
+    .arrow { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 1.4rem; }
+    .later { margin-top: 18px; border: 2px dashed #bba7cb; border-radius: 9px; padding: 15px; background: rgba(107,76,133,.04); }
+    .later-title { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; font-weight: 800; font-size: .78rem; color: var(--purple); text-transform: uppercase; letter-spacing: .08em; }
+    .later-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; color: var(--muted); font-size: .76rem; }
+    .legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+    .before-after { display: grid; grid-template-columns: 1fr 40px 1.35fr; align-items: stretch; }
+    .state-card { border: 1px solid var(--line); padding: 20px; background: #faf9f5; }
+    .state-card h3 { margin: 0 0 12px; font-size: .82rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .state-card ul { margin: 0; padding-left: 20px; }
+    .state-card li + li { margin-top: 8px; }
+    .state-card.after { border-color: #bba7cb; background: var(--purple-soft); }
+    .state-card em { color: var(--purple); font-style: normal; font-weight: 800; }
+    .impact-table { width: 100%; border-collapse: collapse; font-size: .86rem; }
+    .impact-table th, .impact-table td { padding: 12px 10px; text-align: center; border-bottom: 1px solid var(--line); }
+    .impact-table th:first-child, .impact-table td:first-child { text-align: left; }
+    .impact-table th { color: var(--muted); font-size: .7rem; text-transform: uppercase; letter-spacing: .06em; }
+    .impact-table .hit { color: var(--green); font-weight: 900; }
+    .impact-table .read { color: var(--purple); font-size: .72rem; font-weight: 800; text-transform: uppercase; }
+    .claims { display: grid; gap: 1px; border: 1px solid var(--line); background: var(--line); }
+    .claim { display: grid; grid-template-columns: 180px 1fr 120px; gap: 18px; align-items: center; padding: 15px; background: var(--sheet); }
+    .claim code { color: var(--blue); font-size: .72rem; overflow-wrap: anywhere; }
+    .claim p { margin: 0; font-size: .86rem; }
+    .claim .proof { color: var(--muted); font-size: .74rem; text-align: right; }
+    .boundary { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .boundary article { border: 1px solid var(--line); padding: 18px; }
+    .boundary h3 { margin: 0 0 10px; font-size: .93rem; }
+    .boundary ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: .84rem; }
+    footer { padding: 24px 38px; background: #faf9f5; color: var(--muted); font-size: .75rem; }
+    footer code { overflow-wrap: anywhere; }
+    @media (max-width: 760px) {
+      .topbar-inner, main { width: min(100% - 18px, 1180px); }
+      header, section { padding: 25px 20px; }
+      nav { padding: 0 7px; }
+      .section-head, .boundary { grid-template-columns: 1fr; gap: 8px; }
+      .metrics { grid-template-columns: 1fr 1fr; }
+      .finding { grid-template-columns: 1fr; }
+      .severity { padding-bottom: 2px; }
+      .finding-copy { padding: 8px 18px 17px; }
+      .before-after { grid-template-columns: 1fr; gap: 10px; }
+      .before-after > .arrow { transform: rotate(90deg); min-height: 28px; }
+      .claim { grid-template-columns: 1fr; gap: 5px; }
+      .claim .proof { text-align: left; }
+      .impact-scroll { overflow-x: auto; }
+      .impact-table { min-width: 680px; }
+      footer { padding: 22px 20px; }
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --ink: #edf2ee; --muted: #abb6af; --paper: #121815; --sheet: #1b221e; --line: #364039;
+        --blue: #8fc4ea; --blue-soft: #1b3240; --purple: #c4a8db; --purple-soft: #31283a;
+        --green: #8fd0a8; --green-soft: #20372a; --amber: #e3bd76; --amber-soft: #3b311f;
+        --red: #ee9e95; --red-soft: #412725; --shadow: none;
+      }
+      .topbar, .pill, nav, .flow-shell, .state-card, footer { background: #171e1a; }
+      .summary { color: #ccd5cf; }
+      .state-card.after { background: var(--purple-soft); }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">CodeIntent <span>Semantic review</span></div>
+      <a class="toplink" href="https://github.com/apache/fineract/pull/6143">Open apache/fineract#6143 ↗</a>
+    </div>
+  </div>
+
+  <main>
+    <header>
+      <p class="eyebrow">Semantic change · high confidence</p>
+      <h1>Working Capital Loans can now be charged off—and safely reversed</h1>
+      <p class="summary">The loan remains active, but a new durable accounting tag changes the ledger behavior of charge-off, repayment, adjustment, and automated amortization. This is a lifecycle change, not an isolated endpoint.</p>
+      <div class="metadata">
+        <span class="pill verdict">Governed behavior changed</span>
+        <span class="pill">37 files</span>
+        <span class="pill">1,977 additions</span>
+        <span class="pill">7 modules</span>
+        <span class="pill">Merged 4 Aug 2026</span>
+        <span class="pill">Predictor 0.999738</span>
+      </div>
+      <div class="metrics" aria-label="Analysis summary">
+        <div class="metric"><strong>5</strong><span>semantic claims</span></div>
+        <div class="metric"><strong>3</strong><span>seed families</span></div>
+        <div class="metric"><strong>5</strong><span>workflows touched</span></div>
+        <div class="metric"><strong>2</strong><span>RM records only</span></div>
+      </div>
+    </header>
+
+    <nav aria-label="Review sections">
+      <a href="#findings">Findings</a>
+      <a href="#flow">Semantic flow</a>
+      <a href="#state">State model</a>
+      <a href="#impact">Workflow impact</a>
+      <a href="#evidence">Evidence</a>
+    </nav>
+
+    <section id="findings">
+      <div class="section-head">
+        <h2>Needs attention</h2>
+        <p>Governance findings derived from connected behavior, not simply from the size of the diff.</p>
+      </div>
+      <div class="findings">
+        <article class="finding block">
+          <div class="severity">Accounting sign-off<code>SEM-TEMP-01</code></div>
+          <div class="finding-copy">
+            <h3>A new field controls financial behavior outside the command that writes it</h3>
+            <p><code>chargedOff</code> is persisted by the new API command and later read by repayment, charge adjustment, and discount-fee amortization. Those later ledger routes require accounting-owner review.</p>
+          </div>
+        </article>
+        <article class="finding review">
+          <div class="severity">Coverage gap<code>TST-GAP-02</code></div>
+          <div class="finding-copy">
+            <h3>Charged-off amortization changes route without direct test evidence</h3>
+            <p>The PR tests charge-off, undo, and repayment accounting, but the automated amortization path is modified without an equivalent behavioral scenario.</p>
+          </div>
+        </article>
+        <article class="finding review">
+          <div class="severity">Domain invariant<code>DOM-STATE-03</code></div>
+          <div class="finding-copy">
+            <h3>Charge-off is deliberately separate from loan status</h3>
+            <p>The loan stays <code>ACTIVE</code>, its running balance remains live, and the charge-off tag survives full repayment until an explicit undo.</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section id="flow">
+      <div class="section-head">
+        <h2>The semantic unit is the connected lifecycle</h2>
+        <p>The dashed temporal region is what a file-oriented review can easily miss: persisted state written now changes decisions and outputs later.</p>
+      </div>
+      <div class="flow-shell" role="img" aria-label="Charge-off semantic flow from API command through decisions, persistent state, accounting writes, and later operations">
+        <div class="flow">
+          <div class="flow-col">
+            <div class="node command"><b>POST chargeOff</b><small>New public command and permission</small></div>
+            <div class="node command"><b>POST undoChargeOff</b><small>Compensating operation</small></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="flow-col">
+            <div class="node decision"><b>Eligibility and date rules</b><small>Active, not charged off, not future or before last transaction</small></div>
+            <div class="node decision"><b>Historical ordering</b><small>Undo only while charge-off remains the last user transaction</small></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="flow-col">
+            <div class="node state"><b>Persist charge-off state</b><small>Flag, date, reason, user, transaction, and allocation portions</small></div>
+            <div class="node state"><b>Compensate, do not delete</b><small>Reverse transaction and clear durable tag fields</small></div>
+          </div>
+          <div class="arrow">→</div>
+          <div class="flow-col">
+            <div class="node write"><b>Journal entries</b><small>Expense and charge-off income against portfolio and receivables</small></div>
+            <div class="node write"><b>Read-model output</b><small>Expose charged-off flag, date, reason, and template data</small></div>
+            <div class="node write"><b>Reversal entries</b><small>Preserve audit history through compensating writes</small></div>
+          </div>
+        </div>
+        <div class="later">
+          <div class="later-title">↳ persisted state crosses request and job boundaries</div>
+          <div class="later-grid">
+            <div class="node decision"><b>Later repayment</b><small>Routes proceeds to recovery income</small></div>
+            <div class="node decision"><b>Charge adjustment</b><small>Uses real charged-off state in accounting</small></div>
+            <div class="node decision"><b>Automated amortization</b><small>Selects charged-off ledger treatment</small></div>
+          </div>
+        </div>
+        <div class="legend" aria-hidden="true">
+          <span><i class="swatch" style="background:var(--blue-soft);border:1px solid #a9bed0"></i>Public command</span>
+          <span><i class="swatch" style="background:var(--amber-soft);border:1px solid #d7bd83"></i>Decision seed</span>
+          <span><i class="swatch" style="background:var(--purple-soft);border:1px solid #bba7cb"></i>Field-write seed</span>
+          <span><i class="swatch" style="background:var(--green-soft);border:1px solid #a7ceb5"></i>Observable I/O seed</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="state">
+      <div class="section-head">
+        <h2>Before and after</h2>
+        <p>The essential domain change is a second, independent state dimension—not a new terminal loan status.</p>
+      </div>
+      <div class="before-after">
+        <article class="state-card">
+          <h3>Before PR 6143</h3>
+          <ul>
+            <li>Working Capital Loan is <code>ACTIVE</code>.</li>
+            <li>Repayments and charges follow normal accounting.</li>
+            <li>No operation can establish charge-off state.</li>
+          </ul>
+        </article>
+        <div class="arrow">→</div>
+        <article class="state-card after">
+          <h3>After PR 6143</h3>
+          <ul>
+            <li>Loan stays <code>ACTIVE</code> while <em>chargedOff = true</em>.</li>
+            <li>Repayment remains allowed but changes ledger destination.</li>
+            <li>New charges are rejected after charge-off.</li>
+            <li>The tag survives full repayment and only undo clears it.</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section id="impact">
+      <div class="section-head">
+        <h2>Five governed workflows are implicated</h2>
+        <p>This matrix is a review routing surface: it explains which domain owners need to understand which parts of the change.</p>
+      </div>
+      <div class="impact-scroll">
+        <table class="impact-table">
+          <thead><tr><th>Workflow</th><th>API</th><th>Decisions</th><th>State</th><th>Accounting</th><th>Later behavior</th><th>Test proof</th></tr></thead>
+          <tbody>
+            <tr><td>Loans</td><td class="hit">●</td><td class="hit">●</td><td class="hit">●</td><td>—</td><td class="hit">●</td><td class="hit">●</td></tr>
+            <tr><td>Accounting</td><td>—</td><td class="hit">●</td><td>—</td><td class="hit">●</td><td class="hit">●</td><td class="hit">●</td></tr>
+            <tr><td>Transaction management</td><td class="hit">●</td><td class="hit">●</td><td class="hit">●</td><td>—</td><td>—</td><td class="hit">●</td></tr>
+            <tr><td>Permissions &amp; approvals</td><td class="hit">●</td><td>—</td><td class="hit">●</td><td>—</td><td>—</td><td>—</td></tr>
+            <tr><td>Automation &amp; integrations</td><td>—</td><td>—</td><td class="read">reads</td><td class="hit">●</td><td class="hit">●</td><td style="color:var(--red);font-weight:800">gap</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="evidence">
+      <div class="section-head">
+        <h2>Claims remain traceable to code</h2>
+        <p>Each explanation is a claim to verify, not a replacement for the underlying source evidence.</p>
+      </div>
+      <div class="claims">
+        <article class="claim"><code>charge_off_api</code><p>A new API operation records a non-monetary transaction and marks the loan charged off without moving its balance.</p><span class="proof">3 source spans</span></article>
+        <article class="claim"><code>charge_off_validation</code><p>Eligibility and temporal rules reject inactive, duplicate, future, and historically invalid charge-offs.</p><span class="proof">1 source span</span></article>
+        <article class="claim"><code>undo_charge_off</code><p>Undo reverses the transaction, durable state, and accounting only when historical ordering permits it.</p><span class="proof">2 source spans</span></article>
+        <article class="claim"><code>charge_off_read_model</code><p>API responses expose the implemented flag, date, and optional reason instead of a placeholder.</p><span class="proof">2 source spans</span></article>
+        <article class="claim"><code>charge_off_accounting</code><p>Accrual products post principal, fee, and penalty portions to new charge-off ledger routes.</p><span class="proof">2 source spans</span></article>
+      </div>
+      <div class="boundary" style="margin-top:18px">
+        <article>
+          <h3>Derived evidence</h3>
+          <ul>
+            <li>Base/head source diff and changed line spans</li>
+            <li>Persistent field, decision, and output-write seeds</li>
+            <li>Schema, permission, API, transaction, and journal changes</li>
+            <li>18 behavioral scenarios and 8 accounting tests</li>
+          </ul>
+        </article>
+        <article>
+          <h3>Interpretation and governance</h3>
+          <ul>
+            <li>Workflow ownership and semantic-region names</li>
+            <li>Accounting sign-off requirement</li>
+            <li>Amortization coverage-gap finding</li>
+            <li>RefactoringMiner contributes only two annotation alignments</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <footer>
+      Analysis source: <a href="https://github.com/apache/fineract/pull/6143/files">upstream PR diff</a> · Base <code>54723edfac5b308d313437fc436bfe373103978f</code> · Head <code>f63d8b481264c5a2b52dd0e708bd2ddd95b5026c</code> · Merge <code>e201c03ebe88383eaf69e1a10b4be3e0ec49b6ce</code>
+    </footer>
+  </main>
+</body>
+</html>
