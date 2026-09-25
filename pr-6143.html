@@ -36,19 +36,25 @@
     .brand { display: flex; align-items: baseline; gap: 10px; font-weight: 750; letter-spacing: -.02em; }
     .brand span { color: var(--muted); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
     .toplink { font-size: .84rem; text-decoration: none; }
-    main { margin-top: 28px; margin-bottom: 56px; background: var(--sheet); border: 1px solid var(--line); box-shadow: var(--shadow); }
-    header { padding: 34px 38px 28px; border-bottom: 1px solid var(--line); }
+    main { display: flex; flex-direction: column; margin-top: 28px; margin-bottom: 56px; background: var(--sheet); border: 1px solid var(--line); box-shadow: var(--shadow); }
+    header { order: 0; padding: 34px 38px 28px; border-bottom: 1px solid var(--line); }
     .eyebrow { margin: 0 0 8px; color: var(--blue); text-transform: uppercase; letter-spacing: .12em; font-weight: 800; font-size: .72rem; }
     h1 { max-width: 850px; margin: 0; font: 650 clamp(2rem, 5vw, 3.65rem)/1.04 Georgia, serif; letter-spacing: -.035em; }
     .summary { max-width: 850px; margin: 18px 0 0; color: #35413b; font-size: clamp(1rem, 2vw, 1.18rem); }
     .metadata { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 23px; }
     .pill { border: 1px solid var(--line); border-radius: 99px; padding: 5px 10px; color: var(--muted); background: #faf9f5; font-size: .78rem; }
     .pill.verdict { color: var(--green); background: var(--green-soft); border-color: #bcd9c7; font-weight: 800; }
-    nav { display: flex; overflow-x: auto; padding: 0 38px; border-bottom: 1px solid var(--line); background: #faf9f5; }
+    nav { order: 1; display: flex; overflow-x: auto; padding: 0 38px; border-bottom: 1px solid var(--line); background: #faf9f5; }
     nav a { padding: 14px 18px 12px; color: var(--muted); text-decoration: none; white-space: nowrap; font-size: .84rem; font-weight: 700; border-bottom: 3px solid transparent; }
     nav a:hover, nav a:focus { color: var(--blue); border-bottom-color: var(--blue); }
     section { padding: 32px 38px; border-bottom: 1px solid var(--line); scroll-margin-top: 12px; }
     section:last-child { border-bottom: 0; }
+    #syntax { order: 2; }
+    #findings { order: 3; }
+    #flow { order: 4; }
+    #state { order: 5; }
+    #impact { order: 6; }
+    #evidence { order: 7; }
     .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(220px, 420px); gap: 30px; align-items: end; margin-bottom: 22px; }
     h2 { margin: 0; font: 650 1.65rem/1.2 Georgia, serif; letter-spacing: -.02em; }
     .section-head p { margin: 0; color: var(--muted); font-size: .9rem; }
@@ -140,7 +146,7 @@
     .boundary article { border: 1px solid var(--line); padding: 18px; }
     .boundary h3 { margin: 0 0 10px; font-size: .93rem; }
     .boundary ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: .84rem; }
-    footer { padding: 24px 38px; background: #faf9f5; color: var(--muted); font-size: .75rem; }
+    footer { order: 8; padding: 24px 38px; background: #faf9f5; color: var(--muted); font-size: .75rem; }
     footer code { overflow-wrap: anywhere; }
     @media (max-width: 760px) {
       .topbar-inner, main { width: min(100% - 18px, 1180px); }
@@ -205,9 +211,9 @@
     </header>
 
     <nav aria-label="Review sections">
+      <a href="#syntax">Changed syntax</a>
       <a href="#findings">Findings</a>
       <a href="#flow">Semantic flow</a>
-      <a href="#syntax">Changed syntax</a>
       <a href="#state">State model</a>
       <a href="#impact">Workflow impact</a>
       <a href="#evidence">Evidence</a>
