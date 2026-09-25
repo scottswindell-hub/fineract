@@ -4,10 +4,6 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
-permissions:
-  contents: read
-  issues: write
-
 # The verdict is computed server-side (AWS Lambda) and posted to the PR's
 # native Checks card by the GitHub App. This job only calls the gate; its own
 # status is deliberately NOT tied to the verdict (it fails only if the HTTP
@@ -16,40 +12,6 @@ jobs:
   drift-gate:
     runs-on: ubuntu-latest
     steps:
-      - name: Post live analysis link
-        continue-on-error: true
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const marker = '<!-- codeintent-live-governance -->';
-            const { owner, repo } = context.repo;
-            const number = context.issue.number;
-            const sha = context.payload.pull_request.head.sha;
-            const url = new URL('https://scottswindell-hub.github.io/fineract/');
-            url.search = new URLSearchParams({
-              sha,
-              api: 'https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo',
-              pr: String(number),
-              repo: `${owner}/${repo}`,
-            });
-            const body = `${marker}\n### CodeIntent analysis is starting\n\n` +
-              `[▶ Watch the live governance analysis ↗](${url})\n\n` +
-              `This page will update as the Lambda analyzes PR #${number} (\`${sha.slice(0, 7)}\`).`;
-            const comments = await github.paginate(github.rest.issues.listComments, {
-              owner, repo, issue_number: number, per_page: 100,
-            });
-            const existing = comments.find(comment =>
-              comment.user?.login === 'github-actions[bot]' && comment.body?.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner, repo, comment_id: existing.id, body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner, repo, issue_number: number, body,
-              });
-            }
-
       - name: Call semantic drift gate
         env:
           API_URL: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/verify-semantic
