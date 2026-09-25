@@ -422,4 +422,26 @@ public class TellerWritePlatformServiceJpaImpl implements TellerWritePlatformSer
         }
     }
 
+    /**
+     * CodeIntent Studio governance-rule demonstration fixture (see
+     * hss_idiom_forge/semantic_gate/cpg_spike/idioms_fineract_validation_order.py).
+     * Purely additive scaffolding, not wired into any real command path or
+     * repository: demonstrates a persistence write occurring before its
+     * corresponding request validation, the ordering regression the new
+     * `validation_persist_order` idiom is built to detect. By the time the
+     * validation call below could throw, the demo "write" has already run.
+     */
+    private void demoRecordCashierNoteOutOfOrder(JsonCommand command) {
+        save(command);
+        validateForCashierNote(command);
+    }
+
+    private void save(JsonCommand command) {
+        // demo-only persistence stand-in; intentionally not a real repository call
+    }
+
+    private void validateForCashierNote(JsonCommand command) {
+        // demo-only validation stand-in; intentionally not a real validator call
+    }
+
 }
