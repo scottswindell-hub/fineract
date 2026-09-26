@@ -1,0 +1,59 @@
+name: Fineract Unit Tests
+
+on:
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    env:
+      TZ: Asia/Kolkata
+      DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          # Fineract derives its version from reachable Git tags and fails in a
+          # shallow checkout with "couldn't find matching tag".
+          fetch-depth: 0
+
+      - name: Set up and compile Fineract
+        uses: ./.github/actions/setup-and-build-fineract
+        with:
+          cache-read-only: false
+
+      - name: Run unit tests
+        run: >-
+          ./gradlew --no-daemon --console=plain test
+          -x cucumber
+          -x buildJavaSdk
+          -x :integration-tests:test
+          -x :oauth2-tests:test
+          -x :twofactor-tests:test
+          -x :fineract-e2e-tests-core:test
+          -x :fineract-e2e-tests-runner:test
+
+      - name: Archive failed test results
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: unit-test-results
+          path: |
+            **/build/reports/tests/
+            **/build/test-results/
+          if-no-files-found: ignore
+          retention-days: 5
+          compression-level: 9
