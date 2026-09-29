@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 concurrency:
   group: live-governance-${{ github.event.pull_request.number }}
@@ -21,12 +22,25 @@ jobs:
       - name: Publish live status link
         if: github.event.action != 'closed'
         env:
+          GH_TOKEN: ${{ github.token }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_REPO: ${{ github.repository }}
         run: |
+          set -euo pipefail
           url=$(python3 -c 'import os,urllib.parse; print("https://scottswindell-hub.github.io/fineract/?" + urllib.parse.urlencode({"sha":os.environ["PR_SHA"],"api":"https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo","pr":os.environ["PR_NUMBER"],"repo":os.environ["PR_REPO"]}))')
           echo "[▶ Open the live governance status ↗]($url)" >> "$GITHUB_STEP_SUMMARY"
+          echo "DASHBOARD_URL=$url" >> "$GITHUB_ENV"
+
+          marker='<!-- live-governance-status -->'
+          body=$(printf '%s\n\n[▶ Open the live governance status ↗](%s)' "$marker" "$url")
+          comment_id=$(gh api "repos/$PR_REPO/issues/$PR_NUMBER/comments?per_page=100" \
+            --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- live-governance-status -->")))] | first | .id // empty')
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/$PR_REPO/issues/comments/$comment_id" -f body="$body" >/dev/null
+          else
+            gh api --method POST "repos/$PR_REPO/issues/$PR_NUMBER/comments" -f body="$body" >/dev/null
+          fi
 
       - name: Start live governance analysis
         if: github.event.action != 'closed'
@@ -39,8 +53,13 @@ jobs:
           PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
           PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          STATUS_API: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/status
         run: |
           set -euo pipefail
+          previous_started_at=$(curl -fsS --get "$STATUS_API" --data-urlencode "sha=$PR_SHA" \
+            | jq -r '.started_at // empty' || true)
+          echo "PREVIOUS_STARTED_AT=$previous_started_at" >> "$GITHUB_ENV"
+
           payload=$(python3 -c 'import json,os; print(json.dumps({"owner":os.environ["PR_OWNER"],"repo":os.environ["PR_REPO"],"sha":os.environ["PR_SHA"],"base_ref":os.environ["PR_BASE_REF"],"pr_ref":os.environ["PR_HEAD_REF"],"pull_request_number":int(os.environ["PR_NUMBER"])}))')
           code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$API_URL" \
             -H "Content-Type: application/json" -H "x-api-key: $API_KEY" -d "$payload")
@@ -48,6 +67,49 @@ jobs:
             200|202) echo "Live governance analysis started." ;;
             *) echo "Unable to start live governance analysis (HTTP $code)."; exit 1 ;;
           esac
+
+      - name: Wait for semantic verdict
+        if: github.event.action != 'closed'
+        timeout-minutes: 15
+        env:
+          STATUS_API: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/status
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          deadline=$((SECONDS + 840))
+          while (( SECONDS < deadline )); do
+            status_json=$(curl -fsS --get "$STATUS_API" --data-urlencode "sha=$PR_SHA" || true)
+            if [ -z "$status_json" ]; then status_json='{}'; fi
+            state=$(jq -r '.state // "absent"' <<<"$status_json")
+            started_at=$(jq -r '.started_at // empty' <<<"$status_json")
+
+            if [ "$started_at" = "${PREVIOUS_STARTED_AT:-}" ] && [ -n "$started_at" ]; then
+              echo "Waiting for this workflow's analysis to replace the prior result…"
+            elif [ "$state" = "completed" ]; then
+              verdict=$(jq -r '.verdict // "ERROR"' <<<"$status_json")
+              echo "Semantic analysis completed with verdict $verdict."
+              echo "[▶ Open the live governance status ↗]($DASHBOARD_URL)" >> "$GITHUB_STEP_SUMMARY"
+              case "$verdict" in
+                PASS) exit 0 ;;
+                REVIEW|VIOLATION)
+                  echo "::error title=Semantic governance requires attention::Open the live governance status page for the decision."
+                  exit 1
+                  ;;
+                *)
+                  echo "::error title=Semantic governance failed::The analysis returned an unexpected verdict."
+                  exit 1
+                  ;;
+              esac
+            elif [ "$state" = "in_progress" ]; then
+              echo "Semantic analysis is still running…"
+            else
+              echo "Waiting for semantic analysis to appear…"
+            fi
+            sleep 5
+          done
+
+          echo "::error title=Semantic governance timed out::The analysis did not finish within 14 minutes."
+          exit 1
 
       - name: Ratify merged change
         if: github.event.action == 'closed' && github.event.pull_request.merged == true
