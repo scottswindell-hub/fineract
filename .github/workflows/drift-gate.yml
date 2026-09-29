@@ -20,13 +20,15 @@ jobs:
     permissions:
       contents: read
       deployments: write
+      pull-requests: write
     environment:
       name: Live Governance
       url: ${{ format('https://scottswindell-hub.github.io/fineract/?sha={0}&api=https%3A%2F%2Fqgd63ljozc.execute-api.us-east-1.amazonaws.com%2Fdemo&pr={1}&repo={2}', github.event.pull_request.head.sha, github.event.pull_request.number, github.repository) }}
     steps:
-      - name: Publish live status link
+      - name: Publish live status link in PR description
         if: github.event.action != 'closed'
         env:
+          GH_TOKEN: ${{ github.token }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
           PR_REPO: ${{ github.repository }}
@@ -36,6 +38,10 @@ jobs:
           echo "[▶ Open the live governance status ↗]($url)" >> "$GITHUB_STEP_SUMMARY"
           echo "DASHBOARD_URL=$url" >> "$GITHUB_ENV"
           echo "::notice title=Live governance dashboard::$url"
+
+          current_body=$(gh api "repos/$PR_REPO/pulls/$PR_NUMBER" --jq '.body // ""')
+          new_body=$(CURRENT_BODY="$current_body" DASHBOARD_URL="$url" python3 -c 'import os,re; start="<!-- live-governance:start -->"; end="<!-- live-governance:end -->"; block=start+"\n### Live governance\n[▶ Open the live governance status ↗]("+os.environ["DASHBOARD_URL"]+")\n"+end; body=os.environ.get("CURRENT_BODY", ""); pattern=re.compile(re.escape(start)+r".*?"+re.escape(end), re.S); print(pattern.sub(block, body) if pattern.search(body) else ((body.rstrip()+"\n\n" if body.strip() else "")+block))')
+          gh api --method PATCH "repos/$PR_REPO/pulls/$PR_NUMBER" -f body="$new_body" >/dev/null
 
       - name: Start live governance analysis
         if: github.event.action != 'closed'
