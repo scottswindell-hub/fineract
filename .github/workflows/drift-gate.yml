@@ -1,35 +1,69 @@
-name: Semantic Drift Gate
+name: Live Governance
 
+# Run only the trusted workflow from this fork's base branch. The workflow
+# never checks out or executes pull-request code; Lambda reads the public refs.
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [opened, synchronize, reopened, closed]
 
-# The verdict is computed server-side (AWS Lambda) and posted to the PR's
-# native Checks card by the GitHub App. This job only calls the gate; its own
-# status is deliberately NOT tied to the verdict (it fails only if the HTTP
-# call itself fails), so a real VIOLATION doesn't look like broken plumbing.
+permissions:
+  contents: read
+
+concurrency:
+  group: live-governance-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
-  drift-gate:
+  live-status:
+    name: live status
     runs-on: ubuntu-latest
     steps:
-      - name: Call semantic drift gate
+      - name: Publish live status link
+        if: github.event.action != 'closed'
+        env:
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_REPO: ${{ github.repository }}
+        run: |
+          url=$(python3 -c 'import os,urllib.parse; print("https://scottswindell-hub.github.io/fineract/?" + urllib.parse.urlencode({"sha":os.environ["PR_SHA"],"api":"https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo","pr":os.environ["PR_NUMBER"],"repo":os.environ["PR_REPO"]}))')
+          echo "[▶ Open the live governance status ↗]($url)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Start live governance analysis
+        if: github.event.action != 'closed'
         env:
           API_URL: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/verify-semantic
           API_KEY: ${{ secrets.DRIFT_GATE_API_KEY }}
-          # PR-supplied values via env (not interpolated into the script) to
-          # avoid shell-injection from branch names etc.
           PR_OWNER: ${{ github.repository_owner }}
           PR_REPO: ${{ github.event.repository.name }}
           PR_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_BASE_REF: ${{ github.base_ref }}
-          PR_HEAD_REF: ${{ github.head_ref }}
+          PR_BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD_REF: ${{ github.event.pull_request.head.ref }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           set -euo pipefail
           payload=$(python3 -c 'import json,os; print(json.dumps({"owner":os.environ["PR_OWNER"],"repo":os.environ["PR_REPO"],"sha":os.environ["PR_SHA"],"base_ref":os.environ["PR_BASE_REF"],"pr_ref":os.environ["PR_HEAD_REF"],"pull_request_number":int(os.environ["PR_NUMBER"])}))')
-          # The gate is invoked asynchronously (API Gateway returns 202 immediately);
-          # the verdict is posted out-of-band to this PR's Checks card by the App.
           code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$API_URL" \
             -H "Content-Type: application/json" -H "x-api-key: $API_KEY" -d "$payload")
-          echo "Gate triggered (HTTP $code). The verdict will appear on this PR's Checks card shortly."
-          case "$code" in 200|202) exit 0 ;; *) echo "gate trigger failed (HTTP $code)"; exit 1 ;; esac
+          case "$code" in
+            200|202) echo "Live governance analysis started." ;;
+            *) echo "Unable to start live governance analysis (HTTP $code)."; exit 1 ;;
+          esac
+
+      - name: Ratify merged change
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true
+        env:
+          API_URL: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/verify-semantic
+          API_KEY: ${{ secrets.DRIFT_GATE_API_KEY }}
+          PR_OWNER: ${{ github.repository_owner }}
+          PR_REPO: ${{ github.event.repository.name }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+          payload=$(python3 -c 'import json,os; print(json.dumps({"operation":"accept","owner":os.environ["PR_OWNER"],"repo":os.environ["PR_REPO"],"sha":os.environ["PR_SHA"],"pull_request_number":int(os.environ["PR_NUMBER"]),"rationale":"Merged PR #" + os.environ["PR_NUMBER"]}))')
+          code=$(curl -sS -o /dev/null -w "%{http_code}" -X POST "$API_URL" \
+            -H "Content-Type: application/json" -H "x-api-key: $API_KEY" -d "$payload")
+          case "$code" in
+            200|202) echo "Merged change ratified." ;;
+            *) echo "Unable to ratify merged change (HTTP $code)."; exit 1 ;;
+          esac
