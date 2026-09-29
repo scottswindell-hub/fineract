@@ -15,15 +15,11 @@ concurrency:
 
 jobs:
   live-status:
-    name: semantic verdict · dashboard in View deployment
+    name: governance
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      deployments: write
       pull-requests: write
-    environment:
-      name: Live Governance
-      url: ${{ format('https://scottswindell-hub.github.io/fineract/?sha={0}&api=https%3A%2F%2Fqgd63ljozc.execute-api.us-east-1.amazonaws.com%2Fdemo&pr={1}&repo={2}', github.event.pull_request.head.sha, github.event.pull_request.number, github.repository) }}
     steps:
       - name: Publish live status link in PR description
         if: github.event.action != 'closed'
@@ -40,7 +36,7 @@ jobs:
           echo "::notice title=Live governance dashboard::$url"
 
           current_body=$(gh api "repos/$PR_REPO/pulls/$PR_NUMBER" --jq '.body // ""')
-          new_body=$(CURRENT_BODY="$current_body" DASHBOARD_URL="$url" python3 -c 'import os,re; start="<!-- live-governance:start -->"; end="<!-- live-governance:end -->"; block=start+"\n### Live governance\n[▶ Open the live governance status ↗]("+os.environ["DASHBOARD_URL"]+")\n"+end; body=os.environ.get("CURRENT_BODY", ""); pattern=re.compile(re.escape(start)+r".*?"+re.escape(end), re.S); print(pattern.sub(block, body) if pattern.search(body) else ((body.rstrip()+"\n\n" if body.strip() else "")+block))')
+          new_body=$(CURRENT_BODY="$current_body" DASHBOARD_URL="$url" python3 -c 'import os,re; start="<!-- live-governance:start -->"; end="<!-- live-governance:end -->"; block=start+"\n> [!IMPORTANT]\n> [**▶ Open the live governance status ↗**]("+os.environ["DASHBOARD_URL"]+")\n>\n> Semantic analysis updates live on this page.\n"+end; body=os.environ.get("CURRENT_BODY", ""); pattern=re.compile(re.escape(start)+r".*?"+re.escape(end), re.S); remainder=pattern.sub("", body).strip(); print(block+("\n\n"+remainder if remainder else ""))')
           gh api --method PATCH "repos/$PR_REPO/pulls/$PR_NUMBER" -f body="$new_body" >/dev/null
 
       - name: Start live governance analysis
