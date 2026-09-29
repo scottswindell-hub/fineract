@@ -15,7 +15,7 @@ concurrency:
 
 jobs:
   live-status:
-    name: governance
+    name: Open Live Governance link in PR description
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,7 +33,7 @@ jobs:
           url=$(python3 -c 'import os,urllib.parse; print("https://scottswindell-hub.github.io/fineract/?" + urllib.parse.urlencode({"sha":os.environ["PR_SHA"],"api":"https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo","pr":os.environ["PR_NUMBER"],"repo":os.environ["PR_REPO"]}))')
           echo "[▶ Open the live governance status ↗]($url)" >> "$GITHUB_STEP_SUMMARY"
           echo "DASHBOARD_URL=$url" >> "$GITHUB_ENV"
-          echo "::notice title=Live governance dashboard::$url"
+          echo "::notice title=Open Live Governance::Use the Important link at the top of the PR description."
 
           current_body=$(gh api "repos/$PR_REPO/pulls/$PR_NUMBER" --jq '.body // ""')
           new_body=$(CURRENT_BODY="$current_body" DASHBOARD_URL="$url" python3 -c 'import os,re; start="<!-- live-governance:start -->"; end="<!-- live-governance:end -->"; block=start+"\n> [!IMPORTANT]\n> [**▶ Open the live governance status ↗**]("+os.environ["DASHBOARD_URL"]+")\n>\n> Semantic analysis updates live on this page.\n"+end; body=os.environ.get("CURRENT_BODY", ""); pattern=re.compile(re.escape(start)+r".*?"+re.escape(end), re.S); remainder=pattern.sub("", body).strip(); print(block+("\n\n"+remainder if remainder else ""))')
@@ -89,11 +89,11 @@ jobs:
               case "$verdict" in
                 PASS) exit 0 ;;
                 REVIEW|VIOLATION)
-                  echo "::error title=Semantic governance requires attention::Open the live governance status page for the decision."
+                  echo "::error title=Open Live Governance::Use the Important link at the top of the PR description."
                   exit 1
                   ;;
                 *)
-                  echo "::error title=Semantic governance failed::The analysis returned an unexpected verdict."
+                  echo "::error title=Open Live Governance::Use the Important link at the top of the PR description."
                   exit 1
                   ;;
               esac
