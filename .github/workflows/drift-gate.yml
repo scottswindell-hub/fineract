@@ -36,7 +36,7 @@ jobs:
           echo "::notice title=Open Live Governance::Use the Important link at the top of the PR description."
 
           current_body=$(gh api "repos/$PR_REPO/pulls/$PR_NUMBER" --jq '.body // ""')
-          new_body=$(CURRENT_BODY="$current_body" DASHBOARD_URL="$url" python3 -c 'import os,re; start="<!-- live-governance:start -->"; end="<!-- live-governance:end -->"; block=start+"\n> [!IMPORTANT]\n> [**▶ Open the live governance status ↗**]("+os.environ["DASHBOARD_URL"]+")\n>\n> Semantic analysis updates live on this page.\n"+end; body=os.environ.get("CURRENT_BODY", ""); pattern=re.compile(re.escape(start)+r".*?"+re.escape(end), re.S); remainder=pattern.sub("", body).strip(); print(block+("\n\n"+remainder if remainder else ""))')
+          new_body=$(CURRENT_BODY="$current_body" DASHBOARD_URL="$url" python3 -c 'import os,re; start="<!-- live-governance:start -->"; end="<!-- live-governance:end -->"; image="https://scottswindell-hub.github.io/fineract/assets/live-governance-running.gif"; block=start+"\n> [!IMPORTANT]\n> [![Live Governance analysis running]("+image+")]("+os.environ["DASHBOARD_URL"]+")\n>\n> **Semantic analysis is running.** Open the pulsing label for live details.\n"+end; body=os.environ.get("CURRENT_BODY", ""); pattern=re.compile(re.escape(start)+r".*?"+re.escape(end), re.S); remainder=pattern.sub("", body).strip(); print(block+("\n\n"+remainder if remainder else ""))')
           gh api --method PATCH "repos/$PR_REPO/pulls/$PR_NUMBER" -f body="$new_body" >/dev/null
 
       - name: Start live governance analysis
@@ -107,6 +107,38 @@ jobs:
 
           echo "::error title=Semantic governance timed out::The analysis did not finish within 14 minutes."
           exit 1
+
+      - name: Stop animation and publish semantic verdict
+        if: always() && github.event.action != 'closed'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_SHA: ${{ github.event.pull_request.head.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_REPO: ${{ github.repository }}
+          STATUS_API: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/status
+        run: |
+          set -euo pipefail
+          status_json=$(curl -fsS --get "$STATUS_API" --data-urlencode "sha=$PR_SHA" || true)
+          if [ -z "$status_json" ]; then status_json='{}'; fi
+          state=$(jq -r '.state // "absent"' <<<"$status_json")
+          started_at=$(jq -r '.started_at // empty' <<<"$status_json")
+          verdict=$(jq -r '.verdict // "INCOMPLETE"' <<<"$status_json")
+
+          if [ "$state" != "completed" ] || { [ "$started_at" = "${PREVIOUS_STARTED_AT:-}" ] && [ -n "$started_at" ]; }; then
+            verdict=INCOMPLETE
+          fi
+
+          case "$verdict" in
+            PASS) label="✅ GOVERNANCE PASS — OPEN REPORT ↗" ;;
+            REVIEW) label="⚠️ GOVERNANCE REVIEW — OPEN REPORT ↗" ;;
+            VIOLATION) label="⛔ GOVERNANCE VIOLATION — OPEN REPORT ↗" ;;
+            *) verdict=INCOMPLETE; label="◻️ GOVERNANCE INCOMPLETE — OPEN REPORT ↗" ;;
+          esac
+
+          current_body=$(gh api "repos/$PR_REPO/pulls/$PR_NUMBER" --jq '.body // ""')
+          new_body=$(CURRENT_BODY="$current_body" DASHBOARD_URL="$DASHBOARD_URL" VERDICT="$verdict" LABEL="$label" python3 -c 'import os,re; start="<!-- live-governance:start -->"; end="<!-- live-governance:end -->"; block=start+"\n> [!IMPORTANT]\n> [**"+os.environ["LABEL"]+"**]("+os.environ["DASHBOARD_URL"]+")\n>\n> Semantic analysis completed: **"+os.environ["VERDICT"]+"**.\n"+end; body=os.environ.get("CURRENT_BODY", ""); pattern=re.compile(re.escape(start)+r".*?"+re.escape(end), re.S); remainder=pattern.sub("", body).strip(); print(block+("\n\n"+remainder if remainder else ""))')
+          gh api --method PATCH "repos/$PR_REPO/pulls/$PR_NUMBER" -f body="$new_body" >/dev/null
+          echo "[${label}]($DASHBOARD_URL)" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Ratify merged change
         if: github.event.action == 'closed' && github.event.pull_request.merged == true
