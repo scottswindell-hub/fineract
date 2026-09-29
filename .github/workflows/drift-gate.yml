@@ -98,7 +98,7 @@ jobs:
                   ;;
               esac
             elif [ "$state" = "in_progress" ]; then
-              echo "Semantic analysis is still running…"
+              echo "Live semantic status: $DASHBOARD_URL"
             else
               echo "Waiting for semantic analysis to appear…"
             fi
