@@ -15,7 +15,6 @@ concurrency:
 
 jobs:
   live-status:
-    if: github.event.action != 'closed'
     name: semantic verdict · dashboard in View deployment
     runs-on: ubuntu-latest
     permissions:
@@ -26,6 +25,7 @@ jobs:
       url: ${{ format('https://scottswindell-hub.github.io/fineract/?sha={0}&api=https%3A%2F%2Fqgd63ljozc.execute-api.us-east-1.amazonaws.com%2Fdemo&pr={1}&repo={2}', github.event.pull_request.head.sha, github.event.pull_request.number, github.repository) }}
     steps:
       - name: Publish live status link
+        if: github.event.action != 'closed'
         env:
           PR_SHA: ${{ github.event.pull_request.head.sha }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -38,6 +38,7 @@ jobs:
           echo "::notice title=Live governance dashboard::$url"
 
       - name: Start live governance analysis
+        if: github.event.action != 'closed'
         env:
           API_URL: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/verify-semantic
           API_KEY: ${{ secrets.DRIFT_GATE_API_KEY }}
@@ -63,6 +64,7 @@ jobs:
           esac
 
       - name: Wait for semantic verdict
+        if: github.event.action != 'closed'
         timeout-minutes: 15
         env:
           STATUS_API: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/status
@@ -104,12 +106,8 @@ jobs:
           echo "::error title=Semantic governance timed out::The analysis did not finish within 14 minutes."
           exit 1
 
-  ratify:
-    if: github.event.action == 'closed' && github.event.pull_request.merged == true
-    name: ratify merged change
-    runs-on: ubuntu-latest
-    steps:
       - name: Ratify merged change
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true
         env:
           API_URL: https://qgd63ljozc.execute-api.us-east-1.amazonaws.com/demo/verify-semantic
           API_KEY: ${{ secrets.DRIFT_GATE_API_KEY }}
