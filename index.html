@@ -119,6 +119,11 @@
     --warn: #f3b03a;
     --bad: #ff5d6c;
     --unknown: #7f8ca3;
+    --sev-trivial: #7f8ca3;
+    --sev-low: #3fd07a;
+    --sev-medium: #e6b83f;
+    --sev-high: #f28b3c;
+    --sev-critical: #ff5d6c;
     --shadow: 0 18px 50px -24px rgba(0,0,0,.75);
     --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
     --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -204,6 +209,11 @@
   .node { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
     border: 2px solid var(--line); background: var(--panel); color: var(--ink-3); font-size: 13px; z-index: 1; }
   .step.done .node { border-color: var(--ok); color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, var(--panel)); }
+  .step.fail .node { border-color: var(--bad); color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, var(--panel)); }
+  .step.error .node { border-color: var(--warn); color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, var(--panel)); }
+  .step.blocked .node { border-style: dashed; border-color: var(--ink-3); }
+  .step.fail .step-label { color: var(--bad); }
+  .step.error .step-label { color: var(--warn); }
   .step.active .node { border-color: var(--accent); color: var(--accent);
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); animation: ring 1.5s ease-out infinite; }
   .step.skip .node { border-style: dashed; }
@@ -232,6 +242,11 @@
   .mag { flex: none; font-family: var(--mono); font-size: 11.5px; font-weight: 700; letter-spacing: .5px;
     padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line);
     color: var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); }
+  #app[data-severity="trivial"] .mag { color:var(--sev-trivial); border-color:color-mix(in srgb,var(--sev-trivial) 45%,var(--line)); background:color-mix(in srgb,var(--sev-trivial) 12%,transparent); }
+  #app[data-severity="low"] .mag { color:var(--sev-low); border-color:color-mix(in srgb,var(--sev-low) 45%,var(--line)); background:color-mix(in srgb,var(--sev-low) 12%,transparent); }
+  #app[data-severity="medium"] .mag { color:var(--sev-medium); border-color:color-mix(in srgb,var(--sev-medium) 45%,var(--line)); background:color-mix(in srgb,var(--sev-medium) 12%,transparent); }
+  #app[data-severity="high"] .mag { color:var(--sev-high); border-color:color-mix(in srgb,var(--sev-high) 45%,var(--line)); background:color-mix(in srgb,var(--sev-high) 12%,transparent); }
+  #app[data-severity="critical"] .mag { color:var(--sev-critical); border-color:color-mix(in srgb,var(--sev-critical) 45%,var(--line)); background:color-mix(in srgb,var(--sev-critical) 12%,transparent); }
 
   .panel { margin-top: 14px; padding: 16px 18px; border-radius: var(--radius);
     background: var(--panel-2); border: 1px solid var(--line-soft); }
@@ -368,16 +383,24 @@
   var app = document.getElementById("app");
   var el = function (id) { return document.getElementById(id); };
   var VERDICT_TITLE = {
-    VIOLATION: "Governed behavior removed",
-    PASS: "All governed behavior preserved",
+    VIOLATION: "Required governance checks failed",
+    PASS: "Eligible governance checks completed",
     REVIEW: "Needs authorized human review",
     UNKNOWN: "Could not establish a governed outcome"
   };
   var HEAD = {
     absent: "Waiting for the gate…",
     in_progress: "Analyzing this change…",
-    completed: { VIOLATION: "Semantic governance violation", PASS: "Change is clean",
+    completed: { VIOLATION: "Change blocked by governance checks", PASS: "Checks completed",
       REVIEW: "Human review required", UNKNOWN: "Outcome undetermined" }
+  };
+  var SEVERITY_META = {
+    trivial:  { icon: "○", label: "TRIVIAL" },
+    low:      { icon: "●", label: "LOW" },
+    medium:   { icon: "▲", label: "MEDIUM" },
+    high:     { icon: "◆", label: "HIGH" },
+    critical: { icon: "⚠", label: "CRITICAL" },
+    unavailable: { icon: "?", label: "UNAVAILABLE" }
   };
 
   // ---- rendering -----------------------------------------------------------
@@ -438,8 +461,11 @@
   function renderRail(stages) {
     var rail = el("rail");
     rail.innerHTML = (stages || []).map(function (st) {
-      var cls = st.state || "pending";
-      var icon = cls === "done" ? "✓" : cls === "skip" ? "–" : "";
+      var raw = st.state || "pending";
+      var cls = ({ running:"active", passed:"done", stopped:"skip",
+        blocked:"blocked", failed:"fail", error:"error" })[raw] || raw;
+      var icon = cls === "done" ? "✓" : cls === "skip" || cls === "blocked" ? "–"
+        : cls === "fail" ? "×" : cls === "error" ? "!" : "";
       var detail = st.detail ? esc(st.detail) : (cls === "active" ? "working" : "");
       var caret = cls === "active" ? '<span class="caret">&nbsp;</span>' : "";
       return '<div class="step ' + cls + '">' +
@@ -454,10 +480,33 @@
     if (!v) { el("verdict").hidden = true; return; }
     app.setAttribute("data-verdict", v);
     el("verdict-badge").textContent = v;
-    el("verdict-title").textContent = VERDICT_TITLE[v] || v;
+    var isSeverityPipeline = s.pipeline === "typesafe-checks-v1";
+    var decision = s.severity && s.severity.decision;
+    var title = VERDICT_TITLE[v] || v;
+    if (isSeverityPipeline && v === "PASS" && decision === "skip_small") {
+      title = "Low-impact change; deeper checks skipped";
+    } else if (isSeverityPipeline && v === "PASS") {
+      title = "Semantic change assessed; required checks passed";
+    } else if (isSeverityPipeline && v === "VIOLATION") {
+      title = "Semantic change detected; required checks failed";
+    }
+    el("verdict-title").textContent = title;
     el("verdict-reason").textContent = s.reason || "";
     var mag = el("mag");
-    if (s.magnitude) { mag.hidden = false; mag.textContent = "magnitude · " + s.magnitude; } else { mag.hidden = true; }
+    var severity = s.severity || {};
+    var severityLabel = String(severity.label || s.magnitude || "").toLowerCase();
+    var severityMeta = SEVERITY_META[severityLabel];
+    if (severityMeta) {
+      app.setAttribute("data-severity", severityLabel);
+      mag.hidden = false;
+      mag.textContent = severityMeta.icon + " " + severityMeta.label +
+        (severity.score != null ? " · " + severity.score : "");
+      mag.setAttribute("aria-label", "Semantic change severity: " + severityMeta.label.toLowerCase());
+    } else {
+      app.removeAttribute("data-severity");
+      mag.hidden = true;
+      mag.removeAttribute("aria-label");
+    }
 
     var changes = (s.analysis && s.analysis.changes) || [];
     var cp = el("changes-panel");
@@ -632,8 +681,11 @@
   function renderRailInto(id, stages) {
     var rail = el(id);
     rail.innerHTML = (stages || []).map(function (st) {
-      var cls = st.state || "pending";
-      var icon = cls === "done" ? "✓" : cls === "skip" ? "–" : "";
+      var raw = st.state || "pending";
+      var cls = ({ running:"active", passed:"done", stopped:"skip",
+        blocked:"blocked", failed:"fail", error:"error" })[raw] || raw;
+      var icon = cls === "done" ? "✓" : cls === "skip" || cls === "blocked" ? "–"
+        : cls === "fail" ? "×" : cls === "error" ? "!" : "";
       return '<div class="step ' + cls + '"><div class="node">' + icon + '</div>' +
         '<div class="step-body"><div class="step-label">' + esc(st.label) + '</div>' +
         '<div class="step-detail">' + esc(st.detail || "") + (cls === "active" ? '<span class="caret">&nbsp;</span>' : '') + '</div></div></div>';
@@ -690,7 +742,8 @@
 
   // ---- data sources --------------------------------------------------------
   function poll() {
-    var url = API + "/status?sha=" + encodeURIComponent(SHA);
+    var url = API + "/status?sha=" + encodeURIComponent(SHA) +
+      (REPO ? "&repo=" + encodeURIComponent(REPO) : "");
     fetch(url, { headers: { "Accept": "application/json" } })
       .then(function (r) { return r.ok ? r.json() : { state: "absent" }; })
       .then(function (s) {
