@@ -35,3 +35,8 @@ gradleExp/
 .java-version
 
 .windsurf/
+
+demo-ui/node_modules/
+demo-ui/dist/
+demo-ui/coverage/
+demo-ui/*.tsbuildinfo
