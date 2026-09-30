@@ -10,11 +10,14 @@
     &api=<base url>         status endpoint base, e.g. the API Gateway stage URL
     &mock=1                 simulate a run end-to-end with no backend (preview)
 
-  /status contract  (schema "drift-gate-status-v1"):
+  /status contract (legacy v1 and current "drift-gate-status-v2"):
     { schema, sha, pr, repo, state: absent|in_progress|completed,
       started_at, updated_at,
-      stages: [ {id,label,state: pending|active|done|skip, detail} ],
+      stages/checks: [ {id,label,requires,
+        state: pending|running|passed|stopped|blocked|failed|error,
+        conclusion,detail,started_at,completed_at} ],
       verdict: null|PASS|VIOLATION|REVIEW|UNKNOWN, magnitude, reason,
+      severity: {status,decision,label,score,confidence,threshold},
       analysis: { files_analyzed:[...], n_behaviors, changes:[{concept,file,line,kind,reason}] },
       check_run_url, cis: null|{review_url,coverage_url,baseline_url},
       reconciliation_proposal_id, reconciliation: {status,provider,model,classification,candidate,
