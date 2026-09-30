@@ -489,6 +489,8 @@
       title = "Semantic change assessed; required checks passed";
     } else if (isSeverityPipeline && v === "VIOLATION") {
       title = "Semantic change detected; required checks failed";
+    } else if (isSeverityPipeline && v === "UNKNOWN") {
+      title = "Semantic change detected; required checks unavailable";
     }
     el("verdict-title").textContent = title;
     el("verdict-reason").textContent = s.reason || "";
@@ -725,8 +727,12 @@
     renderHeader(s);
     renderRail(s.stages);
     var h = HEAD[s.state];
-    el("headline").textContent = (s.state === "completed" && s.verdict)
+    var headline = (s.state === "completed" && s.verdict)
       ? (h[s.verdict] || "Complete") : (typeof h === "string" ? h : "Analyzing…");
+    if (s.pipeline === "typesafe-checks-v1" && s.state === "completed" && s.verdict === "UNKNOWN") {
+      headline = "Change blocked: required checks unavailable";
+    }
+    el("headline").textContent = headline;
     if (s.state === "in_progress") {
       var active = (s.stages || []).filter(function (x) { return x.state === "active"; })[0];
       el("subline").textContent = active ? active.label + (active.detail ? " — " + active.detail : "") : "Running the semantic-change engine…";
